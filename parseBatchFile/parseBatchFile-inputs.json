@@ -1,4 +1,4 @@
 {
-  "ParseBatchFile.batch_file": "sample.batchfile.tsv"
+  "ParseBatchFile.batch_file": "parseBatchFile/sample.batchfile.tsv"
 }
 

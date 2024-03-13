@@ -8,7 +8,7 @@ workflow HelloHostname {
   }
 
   output {
-    File stdout = hostname.out
+    File stdout = Hostname.out
   }
 }
 

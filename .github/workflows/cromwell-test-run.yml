@@ -1,0 +1,32 @@
+name: Cromwell Test Run
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  testrun:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Set Up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      -
+        name: Pull Cromwell Jarfile
+        run: wget -q https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
+      -
+        name: Execute Test Run of WDL Workflows
+        run: |
+          java -jar cromwell-86.jar run helloHostname/helloHostname.wdl
+          java -jar cromwell-86.jar run helloSingularityHostname/helloSingularityHostname.wdl
+          java -jar cromwell-86.jar run parseBatchFile/parseBatchFile.wdl --inputs parseBatchFile/parseBatchFile-inputs.json
+
+
+

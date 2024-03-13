@@ -20,14 +20,14 @@ workflow ParseBatchFile {
     File bedFile = job.bedLocation
 
     ## INSERT YOUR WORKFLOW TO RUN PER LINE IN YOUR BATCH FILE HERE!!!!
-    call test {
+    call Test {
         input: in1=sampleName, in2=bamFile, in3=bedFile
     }
   }  # End Scatter over the batch file
 
   # Outputs that will be retained when execution is complete
   output {
-    Array[File] outputArray = test.item_out
+    Array[File] outputArray = Test.item_out
   }
 # End workflow
 }

@@ -28,7 +28,7 @@ jobs:
         name: Validate WDL Scripts
         run: |
           java -jar womtool-86.jar validate helloHostname/helloHostname.wdl
-          java -jar womtool-86.jar validate helloHostname/helloSingularityHostname.wdl
+          java -jar womtool-86.jar validate helloSingularityHostname/helloSingularityHostname.wdl
           java -jar womtool-86.jar validate parseBatchFile/parseBatchFile.wdl -i parseBatchFile/parseBatchFile-inputs.json
           java -jar womtool-86.jar validate variantCalling/variantCalling.wdl -i variantCalling/variantCalling-inputs.json
 

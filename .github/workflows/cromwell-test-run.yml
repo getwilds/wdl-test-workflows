@@ -25,7 +25,7 @@ jobs:
         name: Execute Test Run of WDL Workflows
         run: |
           java -jar cromwell-86.jar run helloHostname/helloHostname.wdl
-          java -jar cromwell-86.jar run helloSingularityHostname/helloSingularityHostname.wdl
+          java -jar cromwell-86.jar run helloDockerHostname/helloDockerHostname.wdl
           java -jar cromwell-86.jar run parseBatchFile/parseBatchFile.wdl --inputs parseBatchFile/parseBatchFile-inputs.json
 
 

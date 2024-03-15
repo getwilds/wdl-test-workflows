@@ -17,47 +17,45 @@ version 1.0
 
 # struct for the input files for a given sample
 struct SampleInputs {
-  String sample_name
-  File bam_file
-  File bed_file
+  String sample_name # Name of the sample in question
+  File bam_file # Bam alignment file for the sample in question
+  File bed_file # Bed file containing the intervals over which to call variants
 }
 
 # struct for all the reference data needed for the run
 struct ReferenceData {
-  String ref_name
-  File ref_fasta
-  File ref_fasta_index
-  File ref_dict
+  String ref_name # Build version being used as the reference genome, e.g. "hg19", "hg38", etc.
+  File ref_fasta # Reference genome fasta file
+  File ref_fasta_index # Index for reference genome fasta file
+  File ref_dict # Reference genome dictionary file
   # This is the .alt file from bwa-kit (https://github.com/lh3/bwa/tree/master/bwakit),
   # listing the reference contigs that are "alternative". Leave blank in JSON for legacy
   # references such as b37 and hg19.
-  File? ref_alt
-  File ref_amb
-  File ref_ann
-  File ref_bwt
-  File ref_pac
-  File ref_sa
-  File dbSNP_vcf
-  File dbSNP_vcf_index
-  Array[File] known_indels_sites_VCFs
-  Array[File] known_indels_sites_indices
-  String annovar_protocols
-  String annovar_operation
+  File? ref_alt 
+  File ref_amb # Reference .amb file for bwa
+  File ref_ann # Reference .ann file for bwa
+  File ref_bwt # Reference .bwt file for bwa
+  File ref_pac # Reference .pac file for bwa
+  File ref_sa # Reference .sa file for bwa
+  File dbSNP_vcf # dbSNP vcf file for reference during variant calling
+  File dbSNP_vcf_index # Index for the dbSNP vcf file
+  Array[File] known_indels_sites_VCFs # vcf's of known polymorphic sites to exclude
+  Array[File] known_indels_sites_indices # Indexes for the known polymorphic sites vcf's
+  String annovar_protocols # Annotation protocols to use, e.g. refGene, cosmic70, etc.
+  String annovar_operation # Operation level for annovar, e.g. "g" = gene, "f" = filter, etc.
 }
 
 #### WORKFLOW DEFINITION
 
 workflow PanelBwaGatk4Annovar {
   input {
-    # Batch File import
     Array[SampleInputs] sample_batch
-    # Reference Data
     ReferenceData reference_genome
-    # Gizmo Easybuild Modules this has been tested with
-    String gatk_docker = "ghcr.io/getwilds/gatk:4.3.0.0"
-    String annovar_docker = "ghcr.io/getwilds/annovar:hg38" # REPLACE WITH REFNAME!!!
-    String bwa_docker = "ghcr.io/getwilds/bwa:0.7.17"
   }
+
+  String gatk_docker = "ghcr.io/getwilds/gatk:4.3.0.0"
+  String annovar_docker = "ghcr.io/getwilds/annovar:${reference_genome.ref_name}"
+  String bwa_docker = "ghcr.io/getwilds/bwa:0.7.17"
 
   scatter (sample in sample_batch){
     File bam = sample.bam_file
@@ -158,9 +156,20 @@ workflow PanelBwaGatk4Annovar {
   output {
     Array[File] analysis_ready_bam = ApplyBaseRecalibrator.recalibrated_bam 
     Array[File] analysis_ready_bai = ApplyBaseRecalibrator.recalibrated_bai
-    Array[File] GATK_vcf = HaplotypeCaller.output_vcf
+    Array[File] gatk_vcf = HaplotypeCaller.output_vcf
     Array[File] annotated_vcf = annovar.output_annotated_vcf
     Array[File] annotated_table = annovar.output_annotated_table
+  }
+
+  parameter_meta {
+    sample_batch: "array of structs pointing to the sample data of interest"
+    reference_genome: "struct containing the necessary reference files for alignment"
+
+    analysis_ready_bam: "recalibrated bam file produced during alignment steps"
+    analysis_ready_bai: "index file for the recalibrated bam"
+    gatk_vcf: "raw vcf that comes straight out of HaplotypeCaller"
+    annotated_vcf: "annotated vcf produced by Annovar"
+    annotated_table: "tsv file containing the same annotation data"
   }
 } # End workflow
 
@@ -172,27 +181,36 @@ task SortBed {
     File unsorted_bed
     File ref_dict
     String task_docker
-
   }
-  command {
+
+  command <<<
     set -eo pipefail
     echo "Sort bed file"
-    sort -k1,1V -k2,2n -k3,3n ~{unsorted_bed} > sorted.bed
+    sort -k1,1V -k2,2n -k3,3n "~{unsorted_bed}" > sorted.bed
     echo "Transform bed file to intervals list with Picard----------------------------------------"
     gatk --java-options "-Xms4g" \
       BedToIntervalList \
       -I sorted.bed \
       -O sorted.interval_list \
-      -SD ~{ref_dict}
+      -SD "~{ref_dict}"
+  >>>
+
+  output {
+    File intervals = "sorted.interval_list"
+    File sorted_bed = "sorted.bed"
   }
 
   runtime {
     docker: task_docker
   }
 
-  output {
-    File intervals = "sorted.interval_list"
-    File sorted_bed = "sorted.bed"
+  parameter_meta {
+    unsorted_bed: "unsorted bed file containing the intervals over which to call variants"
+    ref_dict: "reference genome dictionary file"
+    task_docker: "Docker container to use during execution"
+
+    intervals: "sorted interval list containing the intervals for variant-calling"
+    sorted_bed: "sorted bed file containing the intervals for variant-calling"
   }
 }
 
@@ -204,22 +222,30 @@ task SamToFastq {
     String task_docker
   }
 
-  command {
+  command <<<
     set -eo pipefail
     gatk --java-options "-Dsamjdk.compression_level=5 -Xms4g" \
       SamToFastq \
-      --INPUT ~{input_bam} \
-      --FASTQ ~{base_file_name}.fastq \
+      --INPUT "~{input_bam}" \
+      --FASTQ "~{base_file_name}.fastq" \
       --INTERLEAVE true \
       --INCLUDE_NON_PF_READS true 
+  >>>
+
+  output {
+    File output_fastq = "~{base_file_name}.fastq"
   }
 
   runtime {
     docker: task_docker
   }
 
-  output {
-    File output_fastq = "~{base_file_name}.fastq"
+  parameter_meta {
+    input_bam: "unmapped bam containing raw reads"
+    base_file_name: "base file name to use when saving the fastq"
+    task_docker: "Docker container to use during execution"
+
+    output_fastq: "final converted fastq"
   }
 }
 
@@ -241,13 +267,14 @@ task BwaMem {
     String task_docker
   }
 
-  command {
+  command <<<
     set -eo pipefail
     bwa mem \
       -p -v 3 -t ~{cpu_needed} -M \
-      ~{ref_fasta} ~{input_fastq} > ~{base_file_name}.sam 
-    samtools view -1bS -@ ~{cpu_needed - 1} -o ~{base_file_name}.aligned.bam ~{base_file_name}.sam
-  }
+      "~{ref_fasta}" "~{input_fastq}" > "~{base_file_name}.sam"
+    samtools view -1bS -@ ~{cpu_needed - 1} \
+      -o "~{base_file_name}.aligned.bam" "~{base_file_name}.sam"
+  >>>
 
   output {
     File output_bam = "~{base_file_name}.aligned.bam"
@@ -257,6 +284,24 @@ task BwaMem {
     docker: task_docker
     memory: "33GB"
     cpu: cpu_needed
+  }
+
+  parameter_meta {
+    input_fastq: "fastq file containing raw reads to be aligned"
+    base_file_name: "base file name to use when saving the bam file"
+    ref_fasta: "reference genome fasta file"
+    ref_fasta_index: "index for the reference genome fasta file"
+    ref_dict: "reference genome dictionary file"
+    ref_alt: "reference genome .alt file for bwa (optional)"
+    ref_amb: "reference genome .amb file for bwa"
+    ref_ann: "reference genome .ann file for bwa"
+    ref_bwt: "reference genome .bwt file for bwa"
+    ref_pac: "reference genome .pac file for bwa"
+    ref_sa: "reference genome .sa file for bwa"
+    cpu_needed: "number of cpus to use during alignment"
+    task_docker: "Docker container to use during execution"
+
+    output_bam: "bam alignment file containing only aligned reads"
   }
 }
 
@@ -272,17 +317,17 @@ task MergeBamAlignment {
     String task_docker
   }
 
-  command {
+  command <<<
     set -eo pipefail
     gatk --java-options "-Dsamjdk.compression_level=5 -XX:-UseGCOverheadLimit -Xmx8g" \
       MergeBamAlignment \
       --VALIDATION_STRINGENCY SILENT \
       --EXPECTED_ORIENTATIONS FR \
       --ATTRIBUTES_TO_RETAIN X0 \
-      --ALIGNED_BAM ~{aligned_bam} \
-      --UNMAPPED_BAM ~{unmapped_bam} \
-      --OUTPUT ~{base_file_name}.merged.bam \
-      --REFERENCE_SEQUENCE ~{ref_fasta} \
+      --ALIGNED_BAM "~{aligned_bam}" \
+      --UNMAPPED_BAM "~{unmapped_bam}" \
+      --OUTPUT "~{base_file_name}.merged.bam" \
+      --REFERENCE_SEQUENCE "~{ref_fasta}" \
       --PAIRED_RUN true \
       --SORT_ORDER coordinate \
       --IS_BISULFITE_SEQUENCE false \
@@ -295,7 +340,7 @@ task MergeBamAlignment {
       --UNMAPPED_READ_STRATEGY COPY_TO_TAG \
       --ALIGNER_PROPER_PAIR_FLAGS true \
       --CREATE_INDEX true
-  }
+  >>>
 
   output {
     File output_bam = "~{base_file_name}.merged.bam"
@@ -304,6 +349,19 @@ task MergeBamAlignment {
 
   runtime {
     docker: task_docker
+  }
+
+  parameter_meta {
+    unmapped_bam: "unmapped bam containing raw reads"
+    aligned_bam: "mapped bam containing aligned reads"
+    base_file_name: "base file name to use when saving the merged bam file"
+    ref_fasta: "reference genome fasta file"
+    ref_fasta_index: "index for the reference genome fasta file"
+    ref_dict: "reference genome dictionary file"
+    task_docker: "Docker container to use during execution"
+
+    output_bam: "merged bam file containing both mapped and unmapped reads"
+    output_bai: "index for the merged bam file"
   }
 }
 
@@ -324,28 +382,29 @@ task ApplyBaseRecalibrator {
     String task_docker
   }
 
-  command {
+  command <<<
     set -eo pipefail
-    samtools index ~{input_bam}
+    samtools index "~{input_bam}"
     gatk --java-options "-Xms4g" \
         BaseRecalibrator \
-        -R ~{ref_fasta} \
-        -I ~{input_bam} \
-        -O ~{base_file_name}.recal_data.csv \
-        --known-sites ~{dbSNP_vcf} \
+        -R "~{ref_fasta}" \
+        -I "~{input_bam}" \
+        -O "~{base_file_name}.recal_data.csv" \
+        --known-sites "~{dbSNP_vcf}" \
         --known-sites ~{sep=" --known-sites " known_indels_sites_VCFs} \
-        --intervals ~{intervals} \
+        --intervals "~{intervals}" \
         --interval-padding 100 
     gatk --java-options "-Xms4g" \
         ApplyBQSR \
-        -bqsr ~{base_file_name}.recal_data.csv \
-        -I ~{input_bam} \
-        -O ~{base_file_name}.recal.bam \
-        -R ~{ref_fasta} \
-        --intervals ~{intervals} \
+        -bqsr "~{base_file_name}.recal_data.csv" \
+        -I "~{input_bam}" \
+        -O "~{base_file_name}.recal.bam" \
+        -R "~{ref_fasta}" \
+        --intervals "~{intervals}" \
         --interval-padding 100 
-    samtools view -H ~{base_file_name}.recal.bam | grep @SQ | sed 's/@SQ\tSN:\|LN://g' > ~{base_file_name}.sortOrder.txt
-  }
+    samtools view -H "~{base_file_name}.recal.bam" | grep @SQ \
+      | sed 's/@SQ\tSN:\|LN://g' > "~{base_file_name}.sortOrder.txt"
+  >>>
 
   output {
     File recalibrated_bam = "~{base_file_name}.recal.bam"
@@ -355,6 +414,25 @@ task ApplyBaseRecalibrator {
 
   runtime {
     docker: task_docker
+  }
+
+  parameter_meta {
+    input_bam: "merged bam file to undergo recalibration"
+    intervals: "interval list containing the regions for recalibration"
+    input_bam_index: "index for the merged input bam file"
+    base_file_name: "base file name to use when saving the recalibrated bam file"
+    dbSNP_vcf: "dbSNP vcf file for reference during recalibration"
+    dbSNP_vcf_index: "index for the dbSNP vcf file"
+    known_indels_sites_VCFs: "vcf's of known polymorphic sites to exclude"
+    known_indels_sites_indices: "indexes for the known polymorphic sites vcf's"
+    ref_fasta: "reference genome fasta file"
+    ref_fasta_index: "index for the reference genome fasta file"
+    ref_dict: "reference genome dictionary file"
+    task_docker: "Docker container to use during execution"
+
+    recalibrated_bam: "recalibrated bam file produced by BQSR"
+    recalibrated_bai: "index for the recalibrated bam file"
+    sortOrder: "text file containing the sorting order if necessary"
   }
 }
 
@@ -372,16 +450,16 @@ task HaplotypeCaller {
     String task_docker
   }
 
-  command {
+  command <<<
     set -eo pipefail
     gatk --java-options "-Xmx4g" \
       HaplotypeCaller \
-      -R ~{ref_fasta} \
-      -I ~{input_bam} \
-      -O ~{base_file_name}.GATK.vcf \
-      --intervals ~{intervals} \
+      -R "~{ref_fasta}" \
+      -I "~{input_bam}" \
+      -O "~{base_file_name}.GATK.vcf" \
+      --intervals "~{intervals}" \
       --interval-padding 100 
-  }
+  >>>
 
   output {
     File output_vcf = "~{base_file_name}.GATK.vcf"
@@ -390,6 +468,21 @@ task HaplotypeCaller {
 
   runtime {
     docker: task_docker
+  }
+
+  parameter_meta {
+    input_bam: "recalibrated bam file to use for variant calling"
+    input_bam_index: "index for the recalibrated bam file"
+    base_file_name: "base file name to use when saving the vcf"
+    intervals: "sorted interval list containing the intervals for variant-calling"
+    ref_dict: "reference genome dictionary file"
+    ref_fasta: "reference genome fasta file"
+    ref_fasta_index: "index for the reference genome fasta file"
+    dbSNP_vcf: "dbSNP vcf file for reference during variant calling"
+    task_docker: "Docker container to use during execution"
+
+    output_vcf: "resulting vcf containing the raw variant calls from HaplotypeCaller"
+    output_vcf_index: "index for the resulting vcf"
   }
 }
 
@@ -405,16 +498,16 @@ task annovar {
     String base_vcf_name = basename(input_vcf, ".vcf")
   }
   
-  command {
+  command <<<
     set -eo pipefail
-    perl /annovar/table_annovar.pl ~{input_vcf} /annovar/humandb/ \
-      -buildver ~{ref_name} \
-      -outfile ~{base_vcf_name} \
+    perl /annovar/table_annovar.pl "~{input_vcf}" /annovar/humandb/ \
+      -buildver "~{ref_name}" \
+      -outfile "~{base_vcf_name}" \
       -remove \
-      -protocol ~{annovar_protocols} \
-      -operation ~{annovar_operation} \
+      -protocol "~{annovar_protocols}" \
+      -operation "~{annovar_operation}" \
       -nastring . -vcfinput
-  }
+  >>>
 
   output {
     File output_annotated_vcf = "~{base_file_name}.GATK.~{ref_name}_multianno.vcf"
@@ -423,5 +516,18 @@ task annovar {
 
   runtime {
     docker: task_docker
+  }
+
+  parameter_meta {
+    input_vcf: "vcf containing variant calls to be annotated by Annovar"
+    base_file_name: "base file name to use when saving the annotation results"
+    ref_name: "Build version being used as the reference genome, e.g. 'hg19', 'hg38', etc."
+    annovar_protocols: "Annotation protocols to use, e.g. refGene, cosmic70, etc."
+    annovar_operation: "Operation level for annovar, e.g. 'g' = gene, 'f' = filter, etc."
+    task_docker: "Docker container to use during execution"
+    base_vcf_name: "base vcf name to be used within Annovar"
+
+    output_annotated_vcf: "annotated vcf produced by Annovar"
+    output_annotated_table: "tsv file containing the same annotation data"
   }
 }

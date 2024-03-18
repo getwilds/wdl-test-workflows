@@ -4,7 +4,7 @@ version 1.0
 
 #### WORKFLOW DEFINITION
 
-workflow HelloHostname {
+workflow HelloSingularityHostname {
   call Hostname {
   }
 
@@ -27,10 +27,11 @@ task Hostname {
   output {
     File out = stdout()
   }
-  
+
   runtime {
     cpu: 1
     memory: "1 GB"
+    docker: "ubuntu:latest"
   }
 
   parameter_meta {

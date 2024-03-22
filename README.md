@@ -1,5 +1,5 @@
 
-# wdl-test-workflows
+# ww-test-workflows
 [![Project Status: Experimental – Useable, some support, not open to feedback, unstable API.](https://getwilds.org/badges/badges/experimental.svg)](https://getwilds.org/badges/#experimental)
 
 This repository contains four basic workflows that can be used as introductory examples for users dipping their toes into the WDL waters, or equally as validation workflows for experienced users testing a new environment/configuration. 
@@ -24,7 +24,7 @@ Although Cromwell is demonstrated here, these pipeline is not specific to Cromwe
 
 ## Support
 
-For questions, bugs, and/or feature requests, reach out to the Fred Hutch Data Science Lab (DaSL) at wilds@fredhutch.org, or open an issue on our [issue tracker](https://github.com/getwilds/wdl-test-workflows/issues).
+For questions, bugs, and/or feature requests, reach out to the Fred Hutch Data Science Lab (DaSL) at wilds@fredhutch.org, or open an issue on our [issue tracker](https://github.com/getwilds/ww-test-workflows/issues).
 
 ## Contributing
 

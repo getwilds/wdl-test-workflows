@@ -29,6 +29,7 @@ jobs:
         run: |
           java -jar womtool-86.jar validate helloHostname/helloHostname.wdl
           java -jar womtool-86.jar validate helloDockerHostname/helloDockerHostname.wdl
+          java -jar womtool-86.jar validate gpuMatrixMult/gpuMatrixMult.wdl
           java -jar womtool-86.jar validate parseBatchFile/parseBatchFile.wdl -i parseBatchFile/parseBatchFile-inputs.json
           java -jar womtool-86.jar validate variantCalling/variantCalling.wdl -i variantCalling/variantCalling-inputs.json
 

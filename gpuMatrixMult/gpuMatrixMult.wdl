@@ -49,9 +49,9 @@ task Hello {
     # modules: "TensorFlow/2.11.0-foss-2022a-CUDA-11.7.0"
     gpus: '1'
   }
-  
+
   parameter_meta {
-    stdout: "printed results of the gpu script in question"
+    response: "printed results of the gpu script in question"
   }
 }
 

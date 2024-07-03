@@ -4,7 +4,7 @@ version 1.0
 
 #### WORKFLOW DEFINITION
 
-workflow HelloSingularityHostname {
+workflow HelloDockerHostname {
   call Hostname {
   }
 
@@ -32,6 +32,7 @@ task Hostname {
     cpu: 1
     memory: "1 GB"
     docker: "ubuntu:latest"
+    # modules: "Python/3.7.4-foss-2019b-fh1"
   }
 
   parameter_meta {

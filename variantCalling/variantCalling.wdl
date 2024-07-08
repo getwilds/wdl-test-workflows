@@ -53,9 +53,9 @@ workflow PanelBwaGatk4Annovar {
     ReferenceData reference_genome
   }
 
-  String gatk_docker = "ghcr.io/getwilds/gatk:4.3.0.0"
-  String annovar_docker = "ghcr.io/getwilds/annovar:${reference_genome.ref_name}"
-  String bwa_docker = "ghcr.io/getwilds/bwa:0.7.17"
+  String gatk_docker = "getwilds/gatk:4.3.0.0"
+  String annovar_docker = "getwilds/annovar:${reference_genome.ref_name}"
+  String bwa_docker = "getwilds/bwa:0.7.17"
 
   scatter (sample in sample_batch){
     File bam = sample.bam_file

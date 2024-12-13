@@ -1,10 +1,6 @@
 name: Variant Calling Test Run
 
 on:
-  push:
-    paths:
-      - 'variantCalling/variantCalling.wdl'
-      - '.github/workflows/variant-calling-test-run.yml'
   pull_request:
     paths:
       - 'variantCalling/variantCalling.wdl'
@@ -17,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Miniconda
-        uses: conda-forge/setup-miniconda@v3
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: true
           python-version: 3.9

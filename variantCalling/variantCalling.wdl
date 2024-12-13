@@ -500,18 +500,16 @@ task annovar {
   
   command <<<
     set -eo pipefail
-    
-    # Convert VCF and preserve all info columns
-    convert2annovar.pl -format vcf4 -includeinfo "~{input_vcf}" > "~{base_vcf_name}.avinput"
-    
-    # Run ANNOVAR annotation
-    perl /annovar/table_annovar.pl "~{base_vcf_name}.avinput" /annovar/humandb/ \
+    perl /annovar/table_annovar.pl "~{input_vcf}" /annovar/humandb/ \
       -buildver "~{ref_name}" \
       -outfile "~{base_vcf_name}" \
       -remove \
       -protocol "~{annovar_protocols}" \
       -operation "~{annovar_operation}" \
-      -nastring . -vcfinput -otherinfo
+      -nastring . \
+      -vcfinput \
+      -otherinfo \
+      -polish
   >>>
 
   output {

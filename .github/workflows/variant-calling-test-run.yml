@@ -21,13 +21,40 @@ jobs:
           # Download and install GATK
           wget https://github.com/broadinstitute/gatk/releases/download/4.4.0.0/gatk-4.4.0.0.zip
           unzip gatk-4.4.0.0.zip
-          # Make gatk executable available
           sudo ln -s $PWD/gatk-4.4.0.0/gatk /usr/local/bin/gatk
 
       - name: Install Cromwell
         run: |
           wget https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
           mv cromwell-86.jar cromwell.jar
+          
+          # Create Cromwell config file
+          cat << EOF > cromwell.conf
+          include required(classpath("application"))
+          
+          backend {
+            default = "LocalExample"
+            providers {
+              LocalExample {
+                actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
+                config {
+                  runtime-attributes = "String? docker"
+                  submit = "/bin/bash ${script}"
+                  submit-docker = "/bin/bash ${script}"
+                  filesystems {
+                    local {
+                      localization: ["soft-link", "copy"]
+                      caching {
+                        duplication-strategy: ["soft-link", "copy"]
+                        hashing-strategy: "path"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          EOF
 
       - name: Setup Test Data
         run: |
@@ -158,7 +185,7 @@ jobs:
 
       - name: Run test workflow
         run: |
-          java -jar cromwell.jar run variantCalling/variantCalling.wdl -i test/test-inputs.json
+          java -jar cromwell.jar run -Dconfig.file=cromwell.conf variantCalling/variantCalling.wdl -i test/test-inputs.json
 
       - name: Check outputs
         run: |

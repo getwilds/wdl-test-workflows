@@ -232,8 +232,8 @@ jobs:
           cat test/test-inputs.json
           
           # Run with debugging
-          java -Dconfig.file=cromwell.conf -jar cromwell.jar run \
-            -Dcromwell.workflows.debug-mode=true \
+          java -Dconfig.file=cromwell.conf -Dcromwell.workflows.debug-mode=true \
+            -jar cromwell.jar run \
             variantCalling/variantCalling.wdl \
             -i test/test-inputs.json
           

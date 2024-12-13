@@ -282,7 +282,7 @@ task BwaMem {
 
   runtime {
     docker: task_docker
-    memory: "33GB"
+    memory: "4GB"
     cpu: cpu_needed
   }
 

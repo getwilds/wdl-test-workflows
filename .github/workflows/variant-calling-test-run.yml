@@ -221,6 +221,21 @@ jobs:
           echo "=== Verifying Bed Files ==="
           cat test/data/test.bed
 
+      - name: Verify reference files in detail
+        run: |
+          echo "=== Reference FASTA dict content ==="
+          cat test/data/ref.fasta.dict
+          
+          echo "=== Reference FAI content ==="
+          cat test/data/ref.fasta.fai
+          
+          echo "=== Reference ANN content ==="
+          cat test/data/ref.fasta.ann
+          
+          # Check if the reference FASTA header matches what's in the dict
+          echo "=== First line of reference FASTA ==="
+          head -n 1 test/data/ref.fasta
+
       - name: Run test workflow
         run: |
           # Print directory structure

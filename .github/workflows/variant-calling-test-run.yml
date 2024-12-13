@@ -241,9 +241,8 @@ jobs:
           
           # Run workflow with more verbose logging
           java -Dbackend.providers.Local.config.root="workflow_logs" \
-                -Xmx4g \
-                -jar cromwell-86.jar run \
-                -v variantCalling/variantCalling.wdl \
+                -Xmx4g -jar cromwell-86.jar run \
+                variantCalling/variantCalling.wdl \
                 --inputs test/test-inputs.json \
                 --metadata-output workflow_logs/metadata.json \
                 2>&1 | tee workflow_logs/workflow.log

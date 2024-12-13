@@ -159,17 +159,20 @@ jobs:
           # Add debugging for BQSR inputs
           echo "=== Checking BQSR input files ==="
           echo "dbSNP VCF:"
-          head -n 5 test/data/dbsnp.vcf
+          head -n 5 dbsnp.vcf
           echo "Mills & 1000G VCF:"
-          zcat test/data/mills_1000G.vcf.gz | head -n 5
+          zcat mills_1000G.vcf.gz | head -n 5
           echo "Known indels VCF:"
-          zcat test/data/known_indels.vcf.gz | head -n 5
+          zcat known_indels.vcf.gz | head -n 5
           
           # Validate VCF files
           echo "=== Validating VCF files ==="
-          gatk ValidateVariants -V test/data/dbsnp.vcf -R test/data/ref.fasta
-          gatk ValidateVariants -V test/data/mills_1000G.vcf.gz -R test/data/ref.fasta
-          gatk ValidateVariants -V test/data/known_indels.vcf.gz -R test/data/ref.fasta
+          gatk ValidateVariants -V dbsnp.vcf -R ref.fasta
+          gatk ValidateVariants -V mills_1000G.vcf.gz -R ref.fasta
+          gatk ValidateVariants -V known_indels.vcf.gz -R ref.fasta
+
+          # Navigating back to original directory
+          cd ../../
 
       - name: Generate test BAM
         run: |

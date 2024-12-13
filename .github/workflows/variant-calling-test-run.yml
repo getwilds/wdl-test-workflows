@@ -41,7 +41,7 @@ jobs:
           
           # Create sequence dictionary and index
           samtools faidx ref.fasta
-          gatk CreateSequenceDictionary -R ref.fasta
+          gatk CreateSequenceDictionary -R ref.fasta -O ref.fasta.dict
           
           # Generate BWA indexes
           bwa index ref.fasta

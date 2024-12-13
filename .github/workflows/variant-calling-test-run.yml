@@ -12,11 +12,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-activate-base: true
-          python-version: 3.9
+      - name: Install required tools
+        run: |
+          # Install system packages
+          sudo apt-get update
+          sudo apt-get install -y wget curl unzip default-jre samtools bwa tabix
+
+          # Download and install GATK
+          wget https://github.com/broadinstitute/gatk/releases/download/4.4.0.0/gatk-4.4.0.0.zip
+          unzip gatk-4.4.0.0.zip
+          export PATH=$PATH:$PWD/gatk-4.4.0.0
 
       - name: Install Cromwell
         run: |
@@ -28,9 +33,6 @@ jobs:
           mkdir -p test/data
           cd test/data
           
-          # Install required tools
-          conda install -c bioconda samtools bwa gatk4 bcftools tabix
-
           # Download reference chromosome 20 from NCBI
           wget ftp://ftp.ncbi.nlm.nih.gov/genomes/archive/old_genbank/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh38/Primary_Assembly/assembled_chromosomes/FASTA/chr20.fa.gz
           gunzip chr20.fa.gz

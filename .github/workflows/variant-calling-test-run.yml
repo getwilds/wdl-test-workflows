@@ -1,4 +1,4 @@
-name: Test Variant Calling WDL
+name: Variant Calling Test Run
 
 on:
   push:

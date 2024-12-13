@@ -180,8 +180,32 @@ jobs:
 
       - name: Generate test BAM
         run: |
-          samtools view -b -o test/data/test.unmapped.bam \
-            <(echo -e "@RG\tID:test\tSM:test_sample\tPL:ILLUMINA\n@SQ\tSN:chr20\tLN:63025520\nread1\t4\t*\t0\t0\t*\t*\t0\t0\tACTG\tFFFF\tRG:Z:test")
+          # Create a more structured test BAM with multiple reads
+          cat << EOF > test/data/test.sam
+          @HD	VN:1.6	SO:queryname
+          @SQ	SN:chr20	LN:63025520
+          @RG	ID:test	SM:test_sample	PL:ILLUMINA	LB:lib1	PU:unit1
+          read1	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
+          read1	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          read2	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
+          read2	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          read3	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
+          read3	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          EOF
+          
+          # Convert SAM to BAM and proper sorting
+          samtools view -b test/data/test.sam > test/data/test.unsorted.bam
+          samtools sort -n test/data/test.unsorted.bam > test/data/test.unmapped.bam
+          samtools index test/data/test.unmapped.bam
+          
+          # Debug: Check the BAM
+          echo "=== Checking final BAM structure ==="
+          samtools view -H test/data/test.unmapped.bam
+          echo "=== First few reads ==="
+          samtools view test/data/test.unmapped.bam | head -n 2
+          
+          # Clean up intermediate files
+          rm test/data/test.sam test/data/test.unsorted.bam
 
       - name: Run test workflow
         run: |

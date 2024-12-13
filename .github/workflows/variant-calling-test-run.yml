@@ -31,18 +31,16 @@ jobs:
           # Create Cromwell config file
           cat << EOF > cromwell.conf
           include required(classpath("application"))
-          
+
           backend {
             default = "LocalExample"
             providers {
               LocalExample {
                 actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
                 config {
-                  # Change to direct command execution
                   submit = "bash -c ${script}"
                   submit-docker = "bash -c ${script}"
                   
-                  # Add job control
                   concurrent-job-limit = 2
                   
                   runtime-attributes = """
@@ -51,7 +49,6 @@ jobs:
                     Int? memory_mb = 4096
                   """
                   
-                  # Add default values
                   default-runtime-attributes {
                     runtime_minutes: 10
                     cpu: 1
@@ -62,7 +59,6 @@ jobs:
             }
           }
 
-          # Fix the job rate control syntax
           system {
             job-rate-control {
               jobs = 1
@@ -71,7 +67,6 @@ jobs:
             
             abort-jobs-on-terminate = true
             
-            # Add debug logging
             workflow-heartbeat {
               ttl = "10 minutes"
               heartbeat-interval = "2 minutes"
@@ -84,8 +79,8 @@ jobs:
             profile = "slick.jdbc.HsqldbProfile$"
             db {
               driver = "org.hsqldb.jdbcDriver"
-              url = "jdbc:hsqldb:mem:${uniqueId};shutdown=false;hsqldb.tx=mvcc"
-              connectionTimeout = 1000
+              url = "jdbc:hsqldb:mem:cromwell;shutdown=false;hsqldb.tx=mvcc"
+              connectionTimeout = 3000
             }
           }
           EOF

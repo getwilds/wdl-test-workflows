@@ -185,7 +185,7 @@ jobs:
 
       - name: Run test workflow
         run: |
-          java -jar cromwell.jar run -Dconfig.file=cromwell.conf variantCalling/variantCalling.wdl -i test/test-inputs.json
+          java -Dconfig.file=cromwell.conf -jar cromwell.jar run variantCalling/variantCalling.wdl -i test/test-inputs.json
 
       - name: Check outputs
         run: |

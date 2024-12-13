@@ -238,25 +238,39 @@ jobs:
 
       - name: Run test workflow
         run: |
-          # Print directory structure
-          echo "=== Directory Structure ==="
-          ls -R
+          # Create a directory for logs
+          mkdir -p task_logs
           
-          # Print test inputs
-          echo "=== Test Inputs ==="
-          cat test/test-inputs.json
-          
-          # Run with debugging
-          java -Dconfig.file=cromwell.conf -Dcromwell.workflows.debug-mode=true \
+          echo "=== Running Workflow with Debug ==="
+          java -Dconfig.file=cromwell.conf \
+            -Dcromwell.workflow.debug-mode=true \
+            -Dcromwell.logging.level=DEBUG \
+            -Dcromwell.backend.max-concurrent-workflows=1 \
             -jar cromwell.jar run \
             variantCalling/variantCalling.wdl \
-            -i test/test-inputs.json
+            -i test/test-inputs.json \
+            2>&1 | tee workflow.log &
           
-          # If it fails, print logs
-          if [ -d "cromwell-workflow-logs" ]; then
-            echo "=== Workflow Logs ==="
-            cat cromwell-workflow-logs/*
-          fi
+          # Store the Cromwell PID
+          CROMWELL_PID=$!
+          
+          # Wait for 2 minutes while monitoring processes
+          for i in {1..24}; do
+            echo "=== Process Check $i ==="
+            ps aux | grep -E 'gatk|sort|java'
+            echo "=== Memory Usage ==="
+            free -h
+            sleep 5
+          done
+          
+          # If we reach here, kill Cromwell and collect logs
+          kill $CROMWELL_PID || true
+          
+          echo "=== Final Directory State ==="
+          ls -R cromwell-executions/ 2>/dev/null || echo "No cromwell-executions directory"
+          
+          echo "=== GATK Logs ==="
+          find . -name "*.log" -type f -exec cat {} \;
 
       - name: Check outputs
         run: |

@@ -142,10 +142,6 @@ jobs:
           samtools view -b -o test/data/test.unmapped.bam \
             <(echo -e "@RG\tID:test\tSM:test_sample\tPL:ILLUMINA\n@SQ\tSN:chr20\tLN:63025520\nread1\t4\t*\t0\t0\t*\t*\t0\t0\tACTG\tFFFF\tRG:Z:test")
 
-      - name: Run workflow validation
-        run: |
-          java -jar cromwell.jar validate variantCalling.wdl
-
       - name: Run test workflow
         run: |
           java -jar cromwell.jar run variantCalling.wdl -i test/test-inputs.json

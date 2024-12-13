@@ -238,25 +238,43 @@ jobs:
           # Create a directory for workflow logs
           mkdir -p workflow_logs
           
-          # Run workflow with more verbose logging
+          echo "=== Running Cromwell with test workflow ==="
+          # Run with more detailed logging and capture all output
           java -Dbackend.providers.Local.config.root="workflow_logs" \
-                -Xmx4g -jar cromwell-86.jar run \
+                -Dconfig.trace=true \
+                -Dakka.loglevel=DEBUG \
+                -Xmx4g \
+                -jar cromwell-86.jar \
+                run \
                 variantCalling/variantCalling.wdl \
                 --inputs test/test-inputs.json \
                 --metadata-output workflow_logs/metadata.json \
                 2>&1 | tee workflow_logs/workflow.log
-          
-          # If workflow fails, print additional debug info
+              
+          # If workflow fails, print debug info
           if [ $? -ne 0 ]; then
             echo "=== Workflow failed, printing debug information ==="
-            echo "=== Last 50 lines of workflow log ==="
-            tail -n 50 workflow_logs/workflow.log
             
-            echo "=== Execution directory contents ==="
-            ls -R workflow_logs
+            echo "=== Directory contents ==="
+            ls -R workflow_logs/
             
-            # Print content of stderr from the failed task if it exists
-            find workflow_logs -name "stderr" -exec sh -c 'echo "=== Content of {}" && cat {}' \;
+            echo "=== Last 100 lines of workflow log ==="
+            tail -n 100 workflow_logs/workflow.log
+            
+            echo "=== Contents of stderr files if they exist ==="
+            find workflow_logs -name "stderr" -type f -exec sh -c 'echo "=== File: {}"; cat {}' \;
+            
+            echo "=== Contents of stdout files if they exist ==="
+            find workflow_logs -name "stdout" -type f -exec sh -c 'echo "=== File: {}"; cat {}' \;
+            
+            echo "=== Contents of script files if they exist ==="
+            find workflow_logs -name "script" -type f -exec sh -c 'echo "=== File: {}"; cat {}' \;
+            
+            # Also print metadata if it exists
+            if [ -f workflow_logs/metadata.json ]; then
+              echo "=== Workflow metadata ==="
+              cat workflow_logs/metadata.json
+            fi
             
             # Exit with failure
             exit 1

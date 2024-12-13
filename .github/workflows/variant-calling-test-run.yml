@@ -156,6 +156,21 @@ jobs:
           }
           EOF
 
+          # Add debugging for BQSR inputs
+          echo "=== Checking BQSR input files ==="
+          echo "dbSNP VCF:"
+          head -n 5 test/data/dbsnp.vcf
+          echo "Mills & 1000G VCF:"
+          zcat test/data/mills_1000G.vcf.gz | head -n 5
+          echo "Known indels VCF:"
+          zcat test/data/known_indels.vcf.gz | head -n 5
+          
+          # Validate VCF files
+          echo "=== Validating VCF files ==="
+          gatk ValidateVariants -V test/data/dbsnp.vcf -R test/data/ref.fasta
+          gatk ValidateVariants -V test/data/mills_1000G.vcf.gz -R test/data/ref.fasta
+          gatk ValidateVariants -V test/data/known_indels.vcf.gz -R test/data/ref.fasta
+
       - name: Generate test BAM
         run: |
           # Create a more structured test BAM with multiple reads
@@ -185,9 +200,13 @@ jobs:
           # Clean up intermediate files
           rm test/data/test.sam test/data/test.unsorted.bam
 
+          # Validate BAM file
+          echo "=== Validating BAM file ==="
+          gatk ValidateSamFile -I test/data/test.unmapped.bam
+
       - name: Run test workflow
         run: |
-          java -jar cromwell-86.jar run variantCalling/variantCalling.wdl --inputs test/test-inputs.json
+          java -Xmx4g -jar cromwell-86.jar run variantCalling/variantCalling.wdl --inputs test/test-inputs.json
 
       - name: Check outputs
         run: |

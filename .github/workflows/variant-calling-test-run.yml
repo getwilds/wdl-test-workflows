@@ -9,124 +9,30 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions: write-all
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set Up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Install required tools
         run: |
           # Install system packages
           sudo apt-get update
-          sudo apt-get install -y wget curl unzip default-jre samtools bwa tabix
+          sudo apt-get install -y wget unzip samtools bwa tabix
 
           # Download and install GATK
           wget https://github.com/broadinstitute/gatk/releases/download/4.4.0.0/gatk-4.4.0.0.zip
           unzip gatk-4.4.0.0.zip
           sudo ln -s $PWD/gatk-4.4.0.0/gatk /usr/local/bin/gatk
 
-      - name: Install Cromwell
-        run: |
-          wget https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
-          mv cromwell-86.jar cromwell.jar
-          
-          # Create Cromwell config file
-          cat << EOF > cromwell.conf
-          include required(classpath("application"))
-
-          backend {
-            default = "LocalExample"
-            providers {
-              LocalExample {
-                actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
-                config {
-                  runtime-attributes = """
-                    Int? runtime_minutes = 10
-                    Int? cpu = 1
-                    Int? memory_mb = 4096
-                    String? docker
-                  """
-                  
-                  submit = """
-                      if [ -n "${docker}" ]; then
-                        docker run \
-                          --rm \
-                          -v ${cwd}:${docker_cwd} \
-                          ${docker} \
-                          /bin/bash ${script}
-                      else
-                        /bin/bash ${script}
-                      fi
-                  """
-                  
-                  submit-docker = """
-                      docker run \
-                        --rm \
-                        -v ${cwd}:${docker_cwd} \
-                        ${docker} \
-                        /bin/bash ${script}
-                  """
-                  
-                  root = "/home/runner/work/ww-test-workflows/ww-test-workflows/cromwell-executions"
-                  dockerRoot = "/home/runner/work/ww-test-workflows/ww-test-workflows/cromwell-executions"
-                  
-                  # Docker configuration
-                  docker {
-                    hash-lookup {
-                      enabled = false
-                    }
-                    enabled = true
-                    cwd = "${docker_cwd}"
-                  }
-
-                  filesystems {
-                    local {
-                      localization: [
-                        "hard-link", "soft-link", "copy"
-                      ]
-                      caching {
-                        duplication-strategy: [
-                          "hard-link", "soft-link", "copy"
-                        ]
-                        hashing-strategy: "file"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          system {
-            job-rate-control {
-              jobs = 1
-              per = 1 second
-            }
-            
-            abort-jobs-on-terminate = true
-            
-            # Add more detailed logging
-            workflow-heartbeat {
-              ttl = "10 minutes"
-              heartbeat-interval = "2 minutes"
-              write-batch-size = 10000
-              write-threshold = 10000
-            }
-
-            # Enable debug logging
-            debug {
-              enabled = true
-              level = "DEBUG"
-            }
-          }
-
-          database {
-            profile = "slick.jdbc.HsqldbProfile$"
-            db {
-              driver = "org.hsqldb.jdbcDriver"
-              url = "jdbc:hsqldb:mem:cromwell;shutdown=false;hsqldb.tx=mvcc"
-              connectionTimeout = 3000
-            }
-          }
-          EOF
+      - name: Pull Cromwell Jarfile
+        run: wget -q https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
 
       - name: Setup Test Data
         run: |
@@ -279,120 +185,9 @@ jobs:
           # Clean up intermediate files
           rm test/data/test.sam test/data/test.unsorted.bam
 
-      - name: Verify test data
-        run: |
-          echo "=== Verifying Reference Files ==="
-          ls -l test/data/ref*
-          
-          echo "=== Verifying BAM File ==="
-          samtools view -H test/data/test.unmapped.bam
-          
-          echo "=== Verifying VCF Files ==="
-          ls -l test/data/*.vcf*
-          
-          echo "=== Verifying Bed Files ==="
-          cat test/data/test.bed
-
-      - name: Verify reference files in detail
-        run: |
-          echo "=== Reference FASTA dict content ==="
-          cat test/data/ref.fasta.dict
-          
-          echo "=== Reference FAI content ==="
-          cat test/data/ref.fasta.fai
-          
-          echo "=== Reference ANN content ==="
-          cat test/data/ref.fasta.ann
-          
-          # Check if the reference FASTA header matches what's in the dict
-          echo "=== First line of reference FASTA ==="
-          head -n 1 test/data/ref.fasta
-
-      - name: Verify GATK installation
-        run: |
-          echo "=== GATK Installation ==="
-          ls -l /usr/local/bin/gatk || echo "GATK not found in /usr/local/bin"
-          which gatk || echo "GATK not in PATH"
-          gatk --version || echo "Cannot get GATK version"
-          
-          echo "=== Java Version ==="
-          java -version
-
-      - name: Debug Docker setup
-        run: |
-          echo "=== Docker Version ==="
-          docker --version
-          
-          echo "=== Docker Info ==="
-          docker info
-          
-          echo "=== Available Docker Images ==="
-          docker images
-          
-          echo "=== Testing Docker Pull ==="
-          docker pull getwilds/gatk:4.3.0.0
-          docker pull getwilds/bwa:0.7.17
-          docker pull getwilds/annovar:hg38
-
-      - name: Verify Docker volumes
-        run: |
-          echo "=== Testing Docker Mount ==="
-          docker run --rm \
-            -v $(pwd)/test:/test \
-            getwilds/gatk:4.3.0.0 \
-            ls -la /test
-
       - name: Run test workflow
         run: |
-          echo "=== Pre-execution Directory Check ==="
-          ls -la
-          
-          echo "=== Verifying WDL inputs ==="
-          java -jar cromwell.jar womtool validate variantCalling/variantCalling.wdl
-          
-          echo "=== Running Workflow with Debug ==="
-          java -Dconfig.file=cromwell.conf \
-            -DLOG_LEVEL=DEBUG \
-            -DBACKEND_LOG_LEVEL=DEBUG \
-            -jar cromwell.jar run \
-            variantCalling/variantCalling.wdl \
-            -i test/test-inputs.json \
-            --metadata-output metadata.json \
-            2>&1 | tee workflow.log
-          
-          echo "=== Workflow Metadata ==="
-          if [ -f metadata.json ]; then
-            cat metadata.json
-          else
-            echo "No metadata file generated"
-          fi
-          
-          echo "=== Execution Directory Content ==="
-          if [ -d cromwell-executions ]; then
-            find cromwell-executions -type f -name "stderr" -o -name "stdout" | while read f; do
-              echo "=== Content of $f ==="
-              cat "$f"
-            done
-          fi
-
-      - name: Debug script execution
-        if: always()  # Run even if previous step failed
-        run: |
-          if [ -d "cromwell-executions" ]; then
-            echo "=== SortBed Script ==="
-            find cromwell-executions -name "script" -type f | while read script; do
-              echo "=== Content of $script ==="
-              cat "$script"
-            done
-            
-            echo "=== Directory Structure ==="
-            find cromwell-executions -type d | while read dir; do
-              echo "=== Contents of $dir ==="
-              ls -la "$dir" || echo "Cannot access directory"
-            done
-          else
-            echo "No cromwell-executions directory found"
-          fi
+          java -jar cromwell-86.jar run variantCalling/variantCalling.wdl --inputs test/test-inputs.json
 
       - name: Check outputs
         run: |

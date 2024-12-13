@@ -38,7 +38,7 @@ jobs:
           wget ftp://ftp.ncbi.nlm.nih.gov/genomes/archive/old_genbank/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh38/Primary_Assembly/assembled_chromosomes/FASTA/chr20.fa.gz
           gunzip chr20.fa.gz
           # Add "chr" prefix to sequence name
-          sed 's/^>20/>chr20/' chr20.fa > ref.fasta
+          sed 's/^>.*/>chr20/' chr20.fa > ref.fasta
           rm chr20.fa
           
           # Create sequence dictionary and index

@@ -238,8 +238,22 @@ jobs:
 
       - name: Run test workflow
         run: |
-          # Create directory for logs
+          # Create logs directory
           mkdir -p logs
+          
+          echo "=== Pre-execution Directory Check ==="
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          
+          echo "=== Creating and checking Cromwell execution directory ==="
+          mkdir -p cromwell-executions
+          sudo chmod -R 777 cromwell-executions
+          ls -la cromwell-executions
+          
+          echo "=== Checking test data accessibility ==="
+          ls -l test/data/
+          ls -l test/test-inputs.json
           
           echo "=== Running Workflow ==="
           java -Dconfig.file=cromwell.conf \
@@ -255,23 +269,36 @@ jobs:
           # Wait briefly to let Cromwell create initial files
           sleep 10
           
-          echo "=== Checking Generated Scripts ==="
-          find cromwell-executions -name "script" -type f -exec sh -c 'echo "=== {} ==="; cat {}' \;
+          echo "=== Checking Task Directories ==="
+          find cromwell-executions -type d -exec sh -c 'echo "=== {} ==="; ls -la {}' \;
           
-          # Monitor for a bit longer
-          sleep 50
+          echo "=== Checking Generated Scripts ==="
+          find cromwell-executions -name "script" -type f -exec sh -c 'echo "=== {} ==="; cat {}; echo "=== Permissions ==="; ls -l {}' \;
+          
+          # Monitor execution
+          for i in {1..12}; do
+            echo "=== Check $i ==="
+            echo "Process tree:"
+            pstree -p $(pgrep java)
+            echo "Directory state:"
+            find cromwell-executions -type f -mmin -1 -ls
+            sleep 5
+          done
           
           # Kill Cromwell if still running
           kill $CROMWELL_PID || true
           
-          echo "=== Final Process State ==="
-          ps aux | grep -E 'gatk|java|samtools'
+          echo "=== Final Directory State ==="
+          find cromwell-executions -type f -ls
           
-          echo "=== Script Execution Logs ==="
-          find cromwell-executions -name "stdout" -o -name "stderr" | while read -r log; do
+          echo "=== Task Logs ==="
+          find cromwell-executions -name "stdout" -o -name "stderr" -o -name "script" | while read -r log; do
             echo "=== $log ==="
-            cat "$log" || echo "Empty/unreadable"
+            cat "$log" 2>/dev/null || echo "Empty/unreadable"
           done
+      
+          echo "=== Cromwell Log Tail ==="
+          tail -n 50 workflow.log
 
       - name: Check outputs
         run: |

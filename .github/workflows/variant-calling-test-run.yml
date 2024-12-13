@@ -23,7 +23,7 @@ jobs:
           wget https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
           mv cromwell-86.jar cromwell.jar
 
-      - name: Setup test data
+      - name: Setup Test Data
         run: |
           mkdir -p test/data
           cd test/data

@@ -207,9 +207,41 @@ jobs:
           # Clean up intermediate files
           rm test/data/test.sam test/data/test.unsorted.bam
 
+      - name: Verify test data
+        run: |
+          echo "=== Verifying Reference Files ==="
+          ls -l test/data/ref*
+          
+          echo "=== Verifying BAM File ==="
+          samtools view -H test/data/test.unmapped.bam
+          
+          echo "=== Verifying VCF Files ==="
+          ls -l test/data/*.vcf*
+          
+          echo "=== Verifying Bed Files ==="
+          cat test/data/test.bed
+
       - name: Run test workflow
         run: |
-          java -Dconfig.file=cromwell.conf -jar cromwell.jar run variantCalling/variantCalling.wdl -i test/test-inputs.json
+          # Print directory structure
+          echo "=== Directory Structure ==="
+          ls -R
+          
+          # Print test inputs
+          echo "=== Test Inputs ==="
+          cat test/test-inputs.json
+          
+          # Run with debugging
+          java -Dconfig.file=cromwell.conf -jar cromwell.jar run \
+            -Dcromwell.workflows.debug-mode=true \
+            variantCalling/variantCalling.wdl \
+            -i test/test-inputs.json
+          
+          # If it fails, print logs
+          if [ -d "cromwell-workflow-logs" ]; then
+            echo "=== Workflow Logs ==="
+            cat cromwell-workflow-logs/*
+          fi
 
       - name: Check outputs
         run: |

@@ -1,0 +1,156 @@
+name: Test Variant Calling WDL
+
+on:
+  push:
+    paths:
+      - 'variantCalling/variantCalling.wdl'
+      - '.github/workflows/variant-calling-test-run.yml'
+  pull_request:
+    paths:
+      - 'variantCalling/variantCalling.wdl'
+      - '.github/workflows/variant-calling-test-run.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Miniconda
+        uses: conda-forge/setup-miniconda@v3
+        with:
+          auto-activate-base: true
+          python-version: 3.9
+
+      - name: Install Cromwell
+        run: |
+          wget https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
+          mv cromwell-86.jar cromwell.jar
+
+      - name: Setup test data
+        run: |
+          mkdir -p test/data
+          cd test/data
+          
+          # Install required tools
+          conda install -c bioconda samtools bwa gatk4 bcftools tabix
+
+          # Download reference chromosome 20 from NCBI
+          wget ftp://ftp.ncbi.nlm.nih.gov/genomes/archive/old_genbank/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh38/Primary_Assembly/assembled_chromosomes/FASTA/chr20.fa.gz
+          gunzip chr20.fa.gz
+          mv chr20.fa ref.fasta
+          
+          # Create sequence dictionary and index
+          samtools faidx ref.fasta
+          gatk CreateSequenceDictionary -R ref.fasta
+          
+          # Generate BWA indexes
+          bwa index ref.fasta
+          
+          # Create a minimal synthetic dbSNP VCF for testing
+          cat << EOF > dbsnp.vcf
+          ##fileformat=VCFv4.2
+          ##reference=GRCh38
+          ##INFO=<ID=RS,Number=1,Type=Integer,Description="dbSNP ID">
+          ##contig=<ID=chr20>
+          #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
+          chr20\t1000100\trs1234567\tA\tG\t.\tPASS\tRS=1234567
+          chr20\t1000200\trs2345678\tT\tC\t.\tPASS\tRS=2345678
+          chr20\t1000300\trs3456789\tG\tA\t.\tPASS\tRS=3456789
+          chr20\t1000400\trs4567890\tC\tT\t.\tPASS\tRS=4567890
+          chr20\t1000500\trs5678901\tAG\tA\t.\tPASS\tRS=5678901
+          EOF
+          
+          gatk IndexFeatureFile -I dbsnp.vcf
+          
+          # Create synthetic Mills and 1000G indels VCF
+          cat << EOF > mills_1000G.vcf
+          ##fileformat=VCFv4.2
+          ##reference=GRCh38
+          ##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">
+          ##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of variant">
+          ##contig=<ID=chr20>
+          #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
+          chr20\t1000150\tMILL1\tAT\tA\t.\tPASS\tTYPE=deletion;SOURCE=MILLS
+          chr20\t1000250\tMILL2\tG\tGTT\t.\tPASS\tTYPE=insertion;SOURCE=MILLS
+          chr20\t1000350\tG1000_1\tCTA\tC\t.\tPASS\tTYPE=deletion;SOURCE=1000G
+          chr20\t1000450\tG1000_2\tT\tTAGC\t.\tPASS\tTYPE=insertion;SOURCE=1000G
+          EOF
+          
+          bgzip mills_1000G.vcf
+          tabix -p vcf mills_1000G.vcf.gz
+          
+          # Create synthetic known indels VCF
+          cat << EOF > known_indels.vcf
+          ##fileformat=VCFv4.2
+          ##reference=GRCh38
+          ##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">
+          ##contig=<ID=chr20>
+          #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
+          chr20\t1000550\tindel1\tAT\tA\t.\tPASS\tTYPE=deletion
+          chr20\t1000650\tindel2\tG\tGTT\t.\tPASS\tTYPE=insertion
+          chr20\t1000750\tindel3\tCTA\tC\t.\tPASS\tTYPE=deletion
+          EOF
+          
+          bgzip known_indels.vcf
+          tabix -p vcf known_indels.vcf.gz
+          
+          # Create minimal test region
+          echo -e "chr20\t1000000\t1100000" > test.bed
+          
+          # Create test JSON with all reference files
+          cat << EOF > ../test-inputs.json
+          {
+            "PanelBwaGatk4Annovar.sample_batch": [
+              {
+                "sample_name": "test_sample",
+                "bam_file": "test/data/test.unmapped.bam",
+                "bed_file": "test/data/test.bed"
+              }
+            ],
+            "PanelBwaGatk4Annovar.reference_genome": {
+              "ref_name": "hg38",
+              "ref_fasta": "test/data/ref.fasta",
+              "ref_fasta_index": "test/data/ref.fasta.fai",
+              "ref_dict": "test/data/ref.fasta.dict",
+              "ref_pac": "test/data/ref.fasta.pac",
+              "ref_sa": "test/data/ref.fasta.sa",
+              "ref_amb": "test/data/ref.fasta.amb",
+              "ref_ann": "test/data/ref.fasta.ann",
+              "ref_alt": "test/data/ref.fasta.alt",
+              "ref_bwt": "test/data/ref.fasta.bwt",
+              "dbSNP_vcf": "test/data/dbsnp.vcf",
+              "dbSNP_vcf_index": "test/data/dbsnp.vcf.idx",
+              "known_indels_sites_VCFs": [
+                "test/data/mills_1000G.vcf.gz",
+                "test/data/known_indels.vcf.gz"
+              ],
+              "known_indels_sites_indices": [
+                "test/data/mills_1000G.vcf.gz.tbi",
+                "test/data/known_indels.vcf.gz.tbi"
+              ],
+              "annovar_protocols": "refGene",
+              "annovar_operation": "g"
+            }
+          }
+          EOF
+
+      - name: Generate test BAM
+        run: |
+          samtools view -b -o test/data/test.unmapped.bam \
+            <(echo -e "@RG\tID:test\tSM:test_sample\tPL:ILLUMINA\n@SQ\tSN:chr20\tLN:63025520\nread1\t4\t*\t0\t0\t*\t*\t0\t0\tACTG\tFFFF\tRG:Z:test")
+
+      - name: Run workflow validation
+        run: |
+          java -jar cromwell.jar validate variantCalling.wdl
+
+      - name: Run test workflow
+        run: |
+          java -jar cromwell.jar run variantCalling.wdl -i test/test-inputs.json
+
+      - name: Check outputs
+        run: |
+          # Basic output existence checks
+          test -f $(find cromwell-executions -name "*.recal.bam")
+          test -f $(find cromwell-executions -name "*.GATK.vcf")
+          test -f $(find cromwell-executions -name "*_multianno.txt")

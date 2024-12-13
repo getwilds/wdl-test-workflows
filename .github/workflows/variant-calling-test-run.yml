@@ -38,22 +38,40 @@ jobs:
               LocalExample {
                 actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
                 config {
-                  runtime-attributes = "String? docker"
-                  submit = "/bin/bash ${script}"
-                  submit-docker = "/bin/bash ${script}"
-                  filesystems {
-                    local {
-                      localization: ["soft-link", "copy"]
-                      caching {
-                        duplication-strategy: ["soft-link", "copy"]
-                        hashing-strategy: "path"
-                      }
-                    }
+                  # Change to direct command execution
+                  submit = "bash -c ${script}"
+                  submit-docker = "bash -c ${script}"
+                  
+                  # Add job control
+                  concurrent-job-limit = 2
+                  
+                  # Add execution timeouts
+                  runtime-attributes = """
+                    Int? runtime_minutes = 10
+                    Int? cpu = 1
+                    Int? memory_mb = 4096
+                  """
+                  
+                  # Add default values
+                  default-runtime-attributes {
+                    runtime_minutes: 10
+                    cpu: 1
+                    memory_mb: 4096
                   }
                 }
               }
             }
           }
+
+          # Add debugging for job execution
+          system.job-rate-control {
+            jobs {
+              per = 1 second
+              number = 1
+            }
+          }
+
+          system.abort-jobs-on-terminate = true
           EOF
 
       - name: Setup Test Data
@@ -299,6 +317,24 @@ jobs:
       
           echo "=== Cromwell Log Tail ==="
           tail -n 50 workflow.log
+
+      - name: Debug script execution
+        run: |
+          # Check script contents
+          echo "=== SortBed Script ==="
+          cat cromwell-executions/PanelBwaGatk4Annovar/*/call-SortBed/shard-0/execution/script
+          
+          echo "=== SamToFastq Script ==="
+          cat cromwell-executions/PanelBwaGatk4Annovar/*/call-SamToFastq/shard-0/execution/script
+          
+          # Try executing script directly
+          cd cromwell-executions/PanelBwaGatk4Annovar/*/call-SortBed/shard-0/execution/
+          echo "=== Running SortBed directly ==="
+          bash script
+          
+          cd ../../call-SamToFastq/shard-0/execution/
+          echo "=== Running SamToFastq directly ==="
+          bash script
 
       - name: Check outputs
         run: |

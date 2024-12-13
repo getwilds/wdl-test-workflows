@@ -214,8 +214,7 @@ task SortBed {
   }
 }
 
-# Read unmapped BAM, convert to FASTQ
-task SamToFastq {
+task SamToFastqDebug {
   input {
     File input_bam
     String base_file_name
@@ -224,28 +223,44 @@ task SamToFastq {
 
   command <<<
     set -eo pipefail
-    gatk --java-options "-Dsamjdk.compression_level=5 -Xms4g" \
+
+    echo "=== Starting SamToFastq debug at $(date) ==="
+    echo "=== Memory information ==="
+    free -h
+    echo "=== Disk space ==="
+    df -h .
+
+    echo "=== Input BAM details at $(date) ==="
+    ls -lh ~{input_bam}
+    samtools view -H ~{input_bam}
+
+    echo "=== Converting BAM to FASTQ at $(date) ==="
+    time gatk --java-options "-Xms512m -Xmx1g -XX:+PrintGCDetails" \
       SamToFastq \
       --INPUT "~{input_bam}" \
       --FASTQ "~{base_file_name}.fastq" \
       --INTERLEAVE true \
-      --INCLUDE_NON_PF_READS true 
+      --INCLUDE_NON_PF_READS false \
+      --VERBOSITY DEBUG \
+      --MAX_RECORDS_IN_RAM 100000
+
+    echo "=== Conversion finished at $(date) ==="
+    echo "=== Output FASTQ details ==="
+    ls -lh "~{base_file_name}.fastq"
+    echo "=== First 8 lines of output ==="
+    head -n 8 "~{base_file_name}.fastq"
   >>>
 
   output {
     File output_fastq = "~{base_file_name}.fastq"
+    File debug_log = stdout()
   }
 
   runtime {
     docker: task_docker
-  }
-
-  parameter_meta {
-    input_bam: "unmapped bam containing raw reads"
-    base_file_name: "base file name to use when saving the fastq"
-    task_docker: "Docker container to use during execution"
-
-    output_fastq: "final converted fastq"
+    memory: "2 GB"
+    cpu: 1
+    preemptible: 0
   }
 }
 

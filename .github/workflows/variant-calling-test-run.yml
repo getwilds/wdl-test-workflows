@@ -45,7 +45,6 @@ jobs:
                   # Add job control
                   concurrent-job-limit = 2
                   
-                  # Add execution timeouts
                   runtime-attributes = """
                     Int? runtime_minutes = 10
                     Int? cpu = 1
@@ -63,15 +62,32 @@ jobs:
             }
           }
 
-          # Add debugging for job execution
-          system.job-rate-control {
-            jobs {
+          # Fix the job rate control syntax
+          system {
+            job-rate-control {
+              jobs = 1
               per = 1 second
-              number = 1
+            }
+            
+            abort-jobs-on-terminate = true
+            
+            # Add debug logging
+            workflow-heartbeat {
+              ttl = "10 minutes"
+              heartbeat-interval = "2 minutes"
+              write-batch-size = 10000
+              write-threshold = 10000
             }
           }
 
-          system.abort-jobs-on-terminate = true
+          database {
+            profile = "slick.jdbc.HsqldbProfile$"
+            db {
+              driver = "org.hsqldb.jdbcDriver"
+              url = "jdbc:hsqldb:mem:${uniqueId};shutdown=false;hsqldb.tx=mvcc"
+              connectionTimeout = 1000
+            }
+          }
           EOF
 
       - name: Setup Test Data
@@ -254,87 +270,48 @@ jobs:
           echo "=== First line of reference FASTA ==="
           head -n 1 test/data/ref.fasta
 
+      - name: Verify GATK installation
+        run: |
+          echo "=== GATK Installation ==="
+          ls -l /usr/local/bin/gatk || echo "GATK not found in /usr/local/bin"
+          which gatk || echo "GATK not in PATH"
+          gatk --version || echo "Cannot get GATK version"
+          
+          echo "=== Java Version ==="
+          java -version
+
       - name: Run test workflow
         run: |
-          # Create logs directory
-          mkdir -p logs
-          
           echo "=== Pre-execution Directory Check ==="
-          echo "Current directory: $(pwd)"
-          echo "Directory contents:"
           ls -la
-          
-          echo "=== Creating and checking Cromwell execution directory ==="
-          mkdir -p cromwell-executions
-          sudo chmod -R 777 cromwell-executions
-          ls -la cromwell-executions
-          
-          echo "=== Checking test data accessibility ==="
-          ls -l test/data/
-          ls -l test/test-inputs.json
           
           echo "=== Running Workflow ==="
           java -Dconfig.file=cromwell.conf \
-            -Dcromwell.workflow.debug-mode=true \
-            -Dcromwell.logging.level=DEBUG \
             -jar cromwell.jar run \
             variantCalling/variantCalling.wdl \
-            -i test/test-inputs.json \
-            2>&1 | tee workflow.log &
-          
-          CROMWELL_PID=$!
-          
-          # Wait briefly to let Cromwell create initial files
-          sleep 10
-          
-          echo "=== Checking Task Directories ==="
-          find cromwell-executions -type d -exec sh -c 'echo "=== {} ==="; ls -la {}' \;
-          
-          echo "=== Checking Generated Scripts ==="
-          find cromwell-executions -name "script" -type f -exec sh -c 'echo "=== {} ==="; cat {}; echo "=== Permissions ==="; ls -l {}' \;
-          
-          # Monitor execution
-          for i in {1..12}; do
-            echo "=== Check $i ==="
-            echo "Process tree:"
-            pstree -p $(pgrep java)
-            echo "Directory state:"
-            find cromwell-executions -type f -mmin -1 -ls
-            sleep 5
-          done
-          
-          # Kill Cromwell if still running
-          kill $CROMWELL_PID || true
-          
-          echo "=== Final Directory State ==="
-          find cromwell-executions -type f -ls
-          
-          echo "=== Task Logs ==="
-          find cromwell-executions -name "stdout" -o -name "stderr" -o -name "script" | while read -r log; do
-            echo "=== $log ==="
-            cat "$log" 2>/dev/null || echo "Empty/unreadable"
-          done
+            -i test/test-inputs.json
       
-          echo "=== Cromwell Log Tail ==="
-          tail -n 50 workflow.log
+          echo "=== Post-execution Directory Check ==="
+          ls -la cromwell-executions/
 
       - name: Debug script execution
+        if: always()  # Run even if previous step failed
         run: |
-          # Check script contents
-          echo "=== SortBed Script ==="
-          cat cromwell-executions/PanelBwaGatk4Annovar/*/call-SortBed/shard-0/execution/script
-          
-          echo "=== SamToFastq Script ==="
-          cat cromwell-executions/PanelBwaGatk4Annovar/*/call-SamToFastq/shard-0/execution/script
-          
-          # Try executing script directly
-          cd cromwell-executions/PanelBwaGatk4Annovar/*/call-SortBed/shard-0/execution/
-          echo "=== Running SortBed directly ==="
-          bash script
-          
-          cd ../../call-SamToFastq/shard-0/execution/
-          echo "=== Running SamToFastq directly ==="
-          bash script
+          if [ -d "cromwell-executions" ]; then
+            echo "=== SortBed Script ==="
+            find cromwell-executions -name "script" -type f | while read script; do
+              echo "=== Content of $script ==="
+              cat "$script"
+            done
+            
+            echo "=== Directory Structure ==="
+            find cromwell-executions -type d | while read dir; do
+              echo "=== Contents of $dir ==="
+              ls -la "$dir" || echo "Cannot access directory"
+            done
+          else
+            echo "No cromwell-executions directory found"
+          fi
 
       - name: Check outputs
         run: |

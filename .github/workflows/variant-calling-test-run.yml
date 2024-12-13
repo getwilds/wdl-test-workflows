@@ -48,7 +48,7 @@ jobs:
           
           # Create sequence dictionary and index
           samtools faidx ref.fasta
-          gatk CreateSequenceDictionary -R ref.fasta -O ref.fasta.dict
+          gatk CreateSequenceDictionary -R ref.fasta -O ref.dict
           
           # Debug: Check the content of our files
           echo "=== Reference FASTA header ==="
@@ -56,7 +56,7 @@ jobs:
           echo "=== Reference FAI content ==="
           cat ref.fasta.fai
           echo "=== Dictionary content ==="
-          head -n 5 ref.fasta.dict
+          head -n 5 ref.dict
           
           # Create and sort test region bed file
           echo -e "chr20\t1000000\t1100000" > test.bed
@@ -72,7 +72,7 @@ jobs:
           gatk BedToIntervalList \
             -I test.bed \
             -O test.interval_list \
-            -SD ref.fasta.dict
+            -SD ref.dict
           
           # Generate BWA indexes
           bwa index ref.fasta
@@ -134,7 +134,7 @@ jobs:
               "ref_name": "hg38",
               "ref_fasta": "test/data/ref.fasta",
               "ref_fasta_index": "test/data/ref.fasta.fai",
-              "ref_dict": "test/data/ref.fasta.dict",
+              "ref_dict": "test/data/ref.dict",
               "ref_pac": "test/data/ref.fasta.pac",
               "ref_sa": "test/data/ref.fasta.sa",
               "ref_amb": "test/data/ref.fasta.amb",

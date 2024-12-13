@@ -214,7 +214,7 @@ task SortBed {
   }
 }
 
-task SamToFastqDebug {
+task SamToFastq {
   input {
     File input_bam
     String base_file_name

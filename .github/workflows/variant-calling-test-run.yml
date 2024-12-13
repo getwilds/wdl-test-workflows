@@ -37,7 +37,9 @@ jobs:
           # Download reference chromosome 20 from NCBI
           wget ftp://ftp.ncbi.nlm.nih.gov/genomes/archive/old_genbank/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh38/Primary_Assembly/assembled_chromosomes/FASTA/chr20.fa.gz
           gunzip chr20.fa.gz
-          mv chr20.fa ref.fasta
+          # Add "chr" prefix to sequence name
+          sed 's/^>20/>chr20/' chr20.fa > ref.fasta
+          rm chr20.fa
           
           # Create sequence dictionary and index
           samtools faidx ref.fasta
@@ -51,7 +53,7 @@ jobs:
           echo '##fileformat=VCFv4.2' > dbsnp.vcf
           echo '##reference=GRCh38' >> dbsnp.vcf
           echo '##INFO=<ID=RS,Number=1,Type=Integer,Description="dbSNP ID">' >> dbsnp.vcf
-          echo '##contig=<ID=chr20,length=63025520>' >> dbsnp.vcf
+          echo "##contig=<ID=chr20,length=$(grep "^chr20" ref.fasta.fai | cut -f2)>" >> dbsnp.vcf
           # Write tab-separated header line using printf
           printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> dbsnp.vcf
           # Write variants
@@ -69,7 +71,7 @@ jobs:
           echo '##reference=GRCh38' >> mills_1000G.vcf
           echo '##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">' >> mills_1000G.vcf
           echo '##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of variant">' >> mills_1000G.vcf
-          echo '##contig=<ID=chr20,length=63025520>' >> mills_1000G.vcf
+          echo "##contig=<ID=chr20,length=$(grep "^chr20" ref.fasta.fai | cut -f2)>" >> mills_1000G.vcf
           # Write tab-separated header line
           printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> mills_1000G.vcf
           # Write variants
@@ -86,7 +88,7 @@ jobs:
           echo '##fileformat=VCFv4.2' > known_indels.vcf
           echo '##reference=GRCh38' >> known_indels.vcf
           echo '##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">' >> known_indels.vcf
-          echo '##contig=<ID=chr20,length=63025520>' >> known_indels.vcf
+          echo "##contig=<ID=chr20,length=$(grep "^chr20" ref.fasta.fai | cut -f2)>" >> known_indels.vcf
           # Write tab-separated header line
           printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> known_indels.vcf
           # Write variants

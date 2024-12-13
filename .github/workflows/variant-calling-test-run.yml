@@ -119,7 +119,6 @@ jobs:
               "ref_sa": "test/data/ref.fasta.sa",
               "ref_amb": "test/data/ref.fasta.amb",
               "ref_ann": "test/data/ref.fasta.ann",
-              "ref_alt": "test/data/ref.fasta.alt",
               "ref_bwt": "test/data/ref.fasta.bwt",
               "dbSNP_vcf": "test/data/dbsnp.vcf",
               "dbSNP_vcf_index": "test/data/dbsnp.vcf.idx",

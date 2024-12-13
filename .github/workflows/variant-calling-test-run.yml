@@ -47,49 +47,52 @@ jobs:
           bwa index ref.fasta
           
           # Create a minimal synthetic dbSNP VCF for testing
-          cat << EOF > dbsnp.vcf
-          ##fileformat=VCFv4.2
-          ##reference=GRCh38
-          ##INFO=<ID=RS,Number=1,Type=Integer,Description="dbSNP ID">
-          ##contig=<ID=chr20>
-          #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
-          chr20\t1000100\trs1234567\tA\tG\t.\tPASS\tRS=1234567
-          chr20\t1000200\trs2345678\tT\tC\t.\tPASS\tRS=2345678
-          chr20\t1000300\trs3456789\tG\tA\t.\tPASS\tRS=3456789
-          chr20\t1000400\trs4567890\tC\tT\t.\tPASS\tRS=4567890
-          chr20\t1000500\trs5678901\tAG\tA\t.\tPASS\tRS=5678901
-          EOF
+          # Write header lines
+          echo '##fileformat=VCFv4.2' > dbsnp.vcf
+          echo '##reference=GRCh38' >> dbsnp.vcf
+          echo '##INFO=<ID=RS,Number=1,Type=Integer,Description="dbSNP ID">' >> dbsnp.vcf
+          echo '##contig=<ID=chr20,length=63025520>' >> dbsnp.vcf
+          # Write tab-separated header line using printf
+          printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> dbsnp.vcf
+          # Write variants
+          printf "chr20\t1000100\trs1234567\tA\tG\t.\tPASS\tRS=1234567\n" >> dbsnp.vcf
+          printf "chr20\t1000200\trs2345678\tT\tC\t.\tPASS\tRS=2345678\n" >> dbsnp.vcf
+          printf "chr20\t1000300\trs3456789\tG\tA\t.\tPASS\tRS=3456789\n" >> dbsnp.vcf
+          printf "chr20\t1000400\trs4567890\tC\tT\t.\tPASS\tRS=4567890\n" >> dbsnp.vcf
+          printf "chr20\t1000500\trs5678901\tAG\tA\t.\tPASS\tRS=5678901\n" >> dbsnp.vcf
           
           gatk IndexFeatureFile -I dbsnp.vcf
           
           # Create synthetic Mills and 1000G indels VCF
-          cat << EOF > mills_1000G.vcf
-          ##fileformat=VCFv4.2
-          ##reference=GRCh38
-          ##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">
-          ##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of variant">
-          ##contig=<ID=chr20>
-          #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
-          chr20\t1000150\tMILL1\tAT\tA\t.\tPASS\tTYPE=deletion;SOURCE=MILLS
-          chr20\t1000250\tMILL2\tG\tGTT\t.\tPASS\tTYPE=insertion;SOURCE=MILLS
-          chr20\t1000350\tG1000_1\tCTA\tC\t.\tPASS\tTYPE=deletion;SOURCE=1000G
-          chr20\t1000450\tG1000_2\tT\tTAGC\t.\tPASS\tTYPE=insertion;SOURCE=1000G
-          EOF
+          # Write header lines
+          echo '##fileformat=VCFv4.2' > mills_1000G.vcf
+          echo '##reference=GRCh38' >> mills_1000G.vcf
+          echo '##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">' >> mills_1000G.vcf
+          echo '##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of variant">' >> mills_1000G.vcf
+          echo '##contig=<ID=chr20,length=63025520>' >> mills_1000G.vcf
+          # Write tab-separated header line
+          printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> mills_1000G.vcf
+          # Write variants
+          printf "chr20\t1000150\tMILL1\tAT\tA\t.\tPASS\tTYPE=deletion;SOURCE=MILLS\n" >> mills_1000G.vcf
+          printf "chr20\t1000250\tMILL2\tG\tGTT\t.\tPASS\tTYPE=insertion;SOURCE=MILLS\n" >> mills_1000G.vcf
+          printf "chr20\t1000350\tG1000_1\tCTA\tC\t.\tPASS\tTYPE=deletion;SOURCE=1000G\n" >> mills_1000G.vcf
+          printf "chr20\t1000450\tG1000_2\tT\tTAGC\t.\tPASS\tTYPE=insertion;SOURCE=1000G\n" >> mills_1000G.vcf
           
           bgzip mills_1000G.vcf
           tabix -p vcf mills_1000G.vcf.gz
           
           # Create synthetic known indels VCF
-          cat << EOF > known_indels.vcf
-          ##fileformat=VCFv4.2
-          ##reference=GRCh38
-          ##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">
-          ##contig=<ID=chr20>
-          #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
-          chr20\t1000550\tindel1\tAT\tA\t.\tPASS\tTYPE=deletion
-          chr20\t1000650\tindel2\tG\tGTT\t.\tPASS\tTYPE=insertion
-          chr20\t1000750\tindel3\tCTA\tC\t.\tPASS\tTYPE=deletion
-          EOF
+          # Write header lines
+          echo '##fileformat=VCFv4.2' > known_indels.vcf
+          echo '##reference=GRCh38' >> known_indels.vcf
+          echo '##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">' >> known_indels.vcf
+          echo '##contig=<ID=chr20,length=63025520>' >> known_indels.vcf
+          # Write tab-separated header line
+          printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> known_indels.vcf
+          # Write variants
+          printf "chr20\t1000550\tindel1\tAT\tA\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
+          printf "chr20\t1000650\tindel2\tG\tGTT\t.\tPASS\tTYPE=insertion\n" >> known_indels.vcf
+          printf "chr20\t1000750\tindel3\tCTA\tC\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
           
           bgzip known_indels.vcf
           tabix -p vcf known_indels.vcf.gz

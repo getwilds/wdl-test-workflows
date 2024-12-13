@@ -203,23 +203,22 @@ jobs:
 
       - name: Generate test BAM
         run: |
-          # Create a more realistic test BAM with variants
+          # Create a test BAM with unmapped reads
           cat << EOF > test/data/test.sam
           @HD	VN:1.6	SO:queryname
           @SQ	SN:chr20	LN:63025520
           @RG	ID:test	SM:test_sample	PL:ILLUMINA	LB:lib1	PU:unit1
-          read1	99	chr20	1000100	60	16M	=	1000200	216	AGTCAGTCAGTCAGTC	FFFFFFFFFFFFFFFF	RG:Z:test
-          read1	147	chr20	1000200	60	16M	=	1000100	-216	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
-          read2	99	chr20	1000300	60	16M	=	1000400	216	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
-          read2	147	chr20	1000400	60	16M	=	1000300	-216	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
-          read3	99	chr20	1000500	60	16M	=	1000600	216	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
-          read3	147	chr20	1000600	60	16M	=	1000500	-216	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          read1	77	*	0	0	*	*	0	0	AGTCAGTCAGTCAGTC	FFFFFFFFFFFFFFFF	RG:Z:test
+          read1	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          read2	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
+          read2	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          read3	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
+          read3	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
           EOF
           
           # Convert SAM to BAM and proper sorting
           samtools view -b test/data/test.sam > test/data/test.unsorted.bam
           samtools sort -n test/data/test.unsorted.bam > test/data/test.unmapped.bam
-          samtools index test/data/test.unmapped.bam
           
           # Debug: Check the BAM
           echo "=== Checking final BAM structure ==="

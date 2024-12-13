@@ -144,7 +144,7 @@ jobs:
 
       - name: Run test workflow
         run: |
-          java -jar cromwell.jar run variantCalling.wdl -i test/test-inputs.json
+          java -jar cromwell.jar run variantCalling/variantCalling.wdl -i test/test-inputs.json
 
       - name: Check outputs
         run: |

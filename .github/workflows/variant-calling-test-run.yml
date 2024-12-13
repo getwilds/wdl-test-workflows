@@ -208,12 +208,12 @@ jobs:
           @HD	VN:1.6	SO:queryname
           @SQ	SN:chr20	LN:63025520
           @RG	ID:test	SM:test_sample	PL:ILLUMINA	LB:lib1	PU:unit1
-          read1	77	*	0	0	*	*	0	0	AGTCAGTCAGTCAGTC	FFFFFFFFFFFFFFFF	RG:Z:test
-          read1	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
-          read2	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
-          read2	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
-          read3	77	*	0	0	*	*	0	0	ACTGACTGACTGACTG	FFFFFFFFFFFFFFFF	RG:Z:test
-          read3	141	*	0	0	*	*	0	0	CGTACGTACGTACGTA	FFFFFFFFFFFFFFFF	RG:Z:test
+          read1	77	*	0	0	*	*	0	0	$(get_ref_base 1000100 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          read1	141	*	0	0	*	*	0	0	$(get_ref_base 1000200 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          read2	77	*	0	0	*	*	0	0	$(get_ref_base 1000300 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          read2	141	*	0	0	*	*	0	0	$(get_ref_base 1000400 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          read3	77	*	0	0	*	*	0	0	$(get_ref_base 1000500 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          read3	141	*	0	0	*	*	0	0	$(get_ref_base 1000600 16)	FFFFFFFFFFFFFFFF	RG:Z:test
           EOF
           
           # Convert SAM to BAM and proper sorting

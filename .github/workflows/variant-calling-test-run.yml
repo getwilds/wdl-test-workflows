@@ -38,21 +38,48 @@ jobs:
               LocalExample {
                 actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
                 config {
-                  submit = "bash -c ${script}"
-                  submit-docker = "bash -c ${script}"
-                  
-                  concurrent-job-limit = 2
-                  
                   runtime-attributes = """
                     Int? runtime_minutes = 10
                     Int? cpu = 1
                     Int? memory_mb = 4096
+                    String? docker
                   """
                   
-                  default-runtime-attributes {
-                    runtime_minutes: 10
-                    cpu: 1
-                    memory_mb: 4096
+                  submit = """
+                    docker run \
+                      --rm \
+                      -v ${cwd}:${docker_cwd} \
+                      -i \
+                      ${docker} \
+                      /bin/bash ${script}
+                  """
+                  
+                  submit-docker = """
+                    docker run \
+                      --rm \
+                      -v ${cwd}:${docker_cwd} \
+                      -i \
+                      ${docker} \
+                      /bin/bash ${script}
+                  """
+                  
+                  root = "cromwell-executions"
+                  dockerRoot = "cromwell-executions"
+                  
+                  # Map between runtime attributes and docker runtime flags
+                  runtime-attributes-mapping {
+                    cpu: "-c"
+                    memory_gb: "-m"
+                  }
+                  
+                  concurrent-job-limit = 2
+                  
+                  # Mount paths for docker
+                  docker {
+                    hash-lookup {
+                      enabled = false
+                    }
+                    cwd = "${docker_cwd}"
                   }
                 }
               }
@@ -274,6 +301,30 @@ jobs:
           
           echo "=== Java Version ==="
           java -version
+
+      - name: Debug Docker setup
+        run: |
+          echo "=== Docker Version ==="
+          docker --version
+          
+          echo "=== Docker Info ==="
+          docker info
+          
+          echo "=== Available Docker Images ==="
+          docker images
+          
+          echo "=== Testing Docker Pull ==="
+          docker pull getwilds/gatk:4.3.0.0
+          docker pull getwilds/bwa:0.7.17
+          docker pull getwilds/annovar:hg38
+
+      - name: Verify Docker volumes
+        run: |
+          echo "=== Testing Docker Mount ==="
+          docker run --rm \
+            -v $(pwd)/test:/test \
+            getwilds/gatk:4.3.0.0 \
+            ls -la /test
 
       - name: Run test workflow
         run: |

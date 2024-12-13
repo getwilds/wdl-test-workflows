@@ -46,40 +46,49 @@ jobs:
                   """
                   
                   submit = """
-                    docker run \
-                      --rm \
-                      -v ${cwd}:${docker_cwd} \
-                      -i \
-                      ${docker} \
-                      /bin/bash ${script}
+                      if [ -n "${docker}" ]; then
+                        docker run \
+                          --rm \
+                          -v ${cwd}:${docker_cwd} \
+                          ${docker} \
+                          /bin/bash ${script}
+                      else
+                        /bin/bash ${script}
+                      fi
                   """
                   
                   submit-docker = """
-                    docker run \
-                      --rm \
-                      -v ${cwd}:${docker_cwd} \
-                      -i \
-                      ${docker} \
-                      /bin/bash ${script}
+                      docker run \
+                        --rm \
+                        -v ${cwd}:${docker_cwd} \
+                        ${docker} \
+                        /bin/bash ${script}
                   """
                   
-                  root = "cromwell-executions"
-                  dockerRoot = "cromwell-executions"
+                  root = "/home/runner/work/ww-test-workflows/ww-test-workflows/cromwell-executions"
+                  dockerRoot = "/home/runner/work/ww-test-workflows/ww-test-workflows/cromwell-executions"
                   
-                  # Map between runtime attributes and docker runtime flags
-                  runtime-attributes-mapping {
-                    cpu: "-c"
-                    memory_gb: "-m"
-                  }
-                  
-                  concurrent-job-limit = 2
-                  
-                  # Mount paths for docker
+                  # Docker configuration
                   docker {
                     hash-lookup {
                       enabled = false
                     }
+                    enabled = true
                     cwd = "${docker_cwd}"
+                  }
+
+                  filesystems {
+                    local {
+                      localization: [
+                        "hard-link", "soft-link", "copy"
+                      ]
+                      caching {
+                        duplication-strategy: [
+                          "hard-link", "soft-link", "copy"
+                        ]
+                        hashing-strategy: "file"
+                      }
+                    }
                   }
                 }
               }
@@ -94,11 +103,18 @@ jobs:
             
             abort-jobs-on-terminate = true
             
+            # Add more detailed logging
             workflow-heartbeat {
               ttl = "10 minutes"
               heartbeat-interval = "2 minutes"
               write-batch-size = 10000
               write-threshold = 10000
+            }
+
+            # Enable debug logging
+            debug {
+              enabled = true
+              level = "DEBUG"
             }
           }
 
@@ -331,14 +347,33 @@ jobs:
           echo "=== Pre-execution Directory Check ==="
           ls -la
           
-          echo "=== Running Workflow ==="
+          echo "=== Verifying WDL inputs ==="
+          java -jar cromwell.jar womtool validate variantCalling/variantCalling.wdl
+          
+          echo "=== Running Workflow with Debug ==="
           java -Dconfig.file=cromwell.conf \
+            -DLOG_LEVEL=DEBUG \
+            -DBACKEND_LOG_LEVEL=DEBUG \
             -jar cromwell.jar run \
             variantCalling/variantCalling.wdl \
-            -i test/test-inputs.json
-      
-          echo "=== Post-execution Directory Check ==="
-          ls -la cromwell-executions/
+            -i test/test-inputs.json \
+            --metadata-output metadata.json \
+            2>&1 | tee workflow.log
+          
+          echo "=== Workflow Metadata ==="
+          if [ -f metadata.json ]; then
+            cat metadata.json
+          else
+            echo "No metadata file generated"
+          fi
+          
+          echo "=== Execution Directory Content ==="
+          if [ -d cromwell-executions ]; then
+            find cromwell-executions -type f -name "stderr" -o -name "stdout" | while read f; do
+              echo "=== Content of $f ==="
+              cat "$f"
+            done
+          fi
 
       - name: Debug script execution
         if: always()  # Run even if previous step failed

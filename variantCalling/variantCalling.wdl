@@ -185,9 +185,25 @@ task SortBed {
 
   command <<<
     set -eo pipefail
-    echo "Sort bed file"
+
+    echo "[DEBUG] Current working directory:"
+    pwd
+    echo "[DEBUG] Directory contents:"
+    ls -la
+    echo "[DEBUG] Environment variables:"
+    env
+    
+    echo "[DEBUG] Checking GATK installation:"
+    which gatk || echo "GATK not found"
+    gatk --help || echo "GATK command failed"
+    
+    echo "[DEBUG] Sort bed file"
     sort -k1,1V -k2,2n -k3,3n "~{unsorted_bed}" > sorted.bed
-    echo "Transform bed file to intervals list with Picard----------------------------------------"
+    
+    echo "[DEBUG] Sorted bed contents:"
+    cat sorted.bed
+    
+    echo "[DEBUG] Running BedToIntervalList"
     gatk --java-options "-Xms4g" \
       BedToIntervalList \
       -I sorted.bed \
@@ -224,12 +240,28 @@ task SamToFastq {
 
   command <<<
     set -eo pipefail
+    
+    echo "[DEBUG] Current working directory:"
+    pwd
+    echo "[DEBUG] Directory contents:"
+    ls -la
+    echo "[DEBUG] Environment variables:"
+    env
+    
+    echo "[DEBUG] Checking GATK installation:"
+    which gatk || echo "GATK not found"
+    gatk --help || echo "GATK command failed"
+    
+    echo "[DEBUG] Input BAM header:"
+    samtools view -H "~{input_bam}"
+    
+    echo "[DEBUG] Running SamToFastq"
     gatk --java-options "-Dsamjdk.compression_level=5 -Xms4g" \
       SamToFastq \
       --INPUT "~{input_bam}" \
       --FASTQ "~{base_file_name}.fastq" \
       --INTERLEAVE true \
-      --INCLUDE_NON_PF_READS true 
+      --INCLUDE_NON_PF_READS true
   >>>
 
   output {

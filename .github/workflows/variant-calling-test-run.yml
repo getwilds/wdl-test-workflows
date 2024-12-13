@@ -23,6 +23,13 @@ jobs:
           unzip gatk-4.4.0.0.zip
           sudo ln -s $PWD/gatk-4.4.0.0/gatk /usr/local/bin/gatk
 
+          # Verify installations
+          echo "=== Checking tool versions ==="
+          java -version
+          gatk --help
+          samtools --version
+          bwa
+
       - name: Install Cromwell
         run: |
           wget https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar

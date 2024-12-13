@@ -23,13 +23,6 @@ jobs:
           unzip gatk-4.4.0.0.zip
           sudo ln -s $PWD/gatk-4.4.0.0/gatk /usr/local/bin/gatk
 
-          # Verify installations
-          echo "=== Checking tool versions ==="
-          java -version
-          gatk --help
-          samtools --version
-          bwa
-
       - name: Install Cromwell
         run: |
           wget https://github.com/broadinstitute/cromwell/releases/download/86/cromwell-86.jar
@@ -245,39 +238,40 @@ jobs:
 
       - name: Run test workflow
         run: |
-          # Create a directory for logs
-          mkdir -p task_logs
+          # Create directory for logs
+          mkdir -p logs
           
-          echo "=== Running Workflow with Debug ==="
+          echo "=== Running Workflow ==="
           java -Dconfig.file=cromwell.conf \
             -Dcromwell.workflow.debug-mode=true \
             -Dcromwell.logging.level=DEBUG \
-            -Dcromwell.backend.max-concurrent-workflows=1 \
             -jar cromwell.jar run \
             variantCalling/variantCalling.wdl \
             -i test/test-inputs.json \
             2>&1 | tee workflow.log &
           
-          # Store the Cromwell PID
           CROMWELL_PID=$!
           
-          # Wait for 2 minutes while monitoring processes
-          for i in {1..24}; do
-            echo "=== Process Check $i ==="
-            ps aux | grep -E 'gatk|sort|java'
-            echo "=== Memory Usage ==="
-            free -h
-            sleep 5
-          done
+          # Wait briefly to let Cromwell create initial files
+          sleep 10
           
-          # If we reach here, kill Cromwell and collect logs
+          echo "=== Checking Generated Scripts ==="
+          find cromwell-executions -name "script" -type f -exec sh -c 'echo "=== {} ==="; cat {}' \;
+          
+          # Monitor for a bit longer
+          sleep 50
+          
+          # Kill Cromwell if still running
           kill $CROMWELL_PID || true
           
-          echo "=== Final Directory State ==="
-          ls -R cromwell-executions/ 2>/dev/null || echo "No cromwell-executions directory"
+          echo "=== Final Process State ==="
+          ps aux | grep -E 'gatk|java|samtools'
           
-          echo "=== GATK Logs ==="
-          find . -name "*.log" -type f -exec cat {} \;
+          echo "=== Script Execution Logs ==="
+          find cromwell-executions -name "stdout" -o -name "stderr" | while read -r log; do
+            echo "=== $log ==="
+            cat "$log" || echo "Empty/unreadable"
+          done
 
       - name: Check outputs
         run: |

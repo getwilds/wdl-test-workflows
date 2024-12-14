@@ -36,7 +36,7 @@ jobs:
 
       - name: Setup Test Data
         run: |
-          mkdir -p test/data
+          # mkdir -p test/data
           cd test/data
           
           # Download reference chromosome 20 from NCBI
@@ -152,8 +152,13 @@ jobs:
           {
             "PanelBwaGatk4Annovar.sample_batch": [
               {
-                "sample_name": "test_sample",
-                "bam_file": "test/data/test.unmapped.bam",
+                "sample_name": "TESTBAM1",
+                "bam_file": "test/data/TESTBAM1.unmapped.bam",
+                "bed_file": "test/data/test.bed"
+              },
+              {
+                "sample_name": "TESTBAM2",
+                "bam_file": "test/data/TESTBAM2.unmapped.bam",
                 "bed_file": "test/data/test.bed"
               }
             ],
@@ -198,35 +203,35 @@ jobs:
           gatk ValidateVariants -V mills_1000G.vcf.gz -R ref.fasta
           gatk ValidateVariants -V known_indels.vcf.gz -R ref.fasta
 
-          # Create a test BAM with unmapped reads
-          cat << EOF > test.sam
-          @HD	VN:1.6	SO:queryname
-          @SQ	SN:chr20	LN:63025520
-          @RG	ID:test	SM:test_sample	PL:ILLUMINA	LB:lib1	PU:unit1
-          read1	77	*	0	0	*	*	0	0	$(get_ref_base 1000100 16)	FFFFFFFFFFFFFFFF	RG:Z:test
-          read1	141	*	0	0	*	*	0	0	$(get_ref_base 1000200 16)	FFFFFFFFFFFFFFFF	RG:Z:test
-          read2	77	*	0	0	*	*	0	0	$(get_ref_base 1000300 16)	FFFFFFFFFFFFFFFF	RG:Z:test
-          read2	141	*	0	0	*	*	0	0	$(get_ref_base 1000400 16)	FFFFFFFFFFFFFFFF	RG:Z:test
-          read3	77	*	0	0	*	*	0	0	$(get_ref_base 1000500 16)	FFFFFFFFFFFFFFFF	RG:Z:test
-          read3	141	*	0	0	*	*	0	0	$(get_ref_base 1000600 16)	FFFFFFFFFFFFFFFF	RG:Z:test
-          EOF
+          # # Create a test BAM with unmapped reads
+          # cat << EOF > test.sam
+          # @HD	VN:1.6	SO:queryname
+          # @SQ	SN:chr20	LN:63025520
+          # @RG	ID:test	SM:test_sample	PL:ILLUMINA	LB:lib1	PU:unit1
+          # read1	77	*	0	0	*	*	0	0	$(get_ref_base 1000100 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          # read1	141	*	0	0	*	*	0	0	$(get_ref_base 1000200 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          # read2	77	*	0	0	*	*	0	0	$(get_ref_base 1000300 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          # read2	141	*	0	0	*	*	0	0	$(get_ref_base 1000400 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          # read3	77	*	0	0	*	*	0	0	$(get_ref_base 1000500 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          # read3	141	*	0	0	*	*	0	0	$(get_ref_base 1000600 16)	FFFFFFFFFFFFFFFF	RG:Z:test
+          # EOF
           
-          # Convert SAM to BAM and proper sorting
-          samtools view -b test.sam > test.unsorted.bam
-          samtools sort -n test.unsorted.bam > test.unmapped.bam
+          # # Convert SAM to BAM and proper sorting
+          # samtools view -b test.sam > test.unsorted.bam
+          # samtools sort -n test.unsorted.bam > test.unmapped.bam
           
-          # Debug: Check the BAM
-          echo "=== Checking final BAM structure ==="
-          samtools view -H test.unmapped.bam
-          echo "=== First few reads ==="
-          samtools view test.unmapped.bam | head -n 2
+          # # Debug: Check the BAM
+          # echo "=== Checking final BAM structure ==="
+          # samtools view -H test.unmapped.bam
+          # echo "=== First few reads ==="
+          # samtools view test.unmapped.bam | head -n 2
           
-          # Clean up intermediate files
-          rm test.sam test.unsorted.bam
+          # # Clean up intermediate files
+          # rm test.sam test.unsorted.bam
 
-          # Validate BAM file
-          echo "=== Validating BAM file ==="
-          gatk ValidateSamFile -I test.unmapped.bam
+          # # Validate BAM file
+          # echo "=== Validating BAM file ==="
+          # gatk ValidateSamFile -I test.unmapped.bam
 
           # Navigating back to original directory
           cd ../../

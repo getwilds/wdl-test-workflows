@@ -59,7 +59,7 @@ jobs:
           head -n 5 ref.dict
           
           # Create and sort test region bed file
-          echo -e "chr20\t1000000\t1100000" > test.bed
+          echo -e "chr20\t10433000\t10437000" > test.bed
           sort -k1,1 -k2,2n test.bed > sorted.bed
           mv sorted.bed test.bed
           
@@ -93,57 +93,58 @@ jobs:
           printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> dbsnp.vcf
           
           # Get actual reference bases and create VCF records
-          ref1=$(get_ref_base 1000100 1)
-          ref2=$(get_ref_base 1000200 1)
-          ref3=$(get_ref_base 1000300 1)
-          ref4=$(get_ref_base 1000400 1)
-          ref5=$(get_ref_base 1000500 2)
-          
-          printf "chr20\t1000100\trs1234567\t${ref1}\tG\t.\tPASS\tRS=1234567\n" >> dbsnp.vcf
-          printf "chr20\t1000200\trs2345678\t${ref2}\tC\t.\tPASS\tRS=2345678\n" >> dbsnp.vcf
-          printf "chr20\t1000300\trs3456789\t${ref3}\tA\t.\tPASS\tRS=3456789\n" >> dbsnp.vcf
-          printf "chr20\t1000400\trs4567890\t${ref4}\tT\t.\tPASS\tRS=4567890\n" >> dbsnp.vcf
-          printf "chr20\t1000500\trs5678901\t${ref5}\tA\t.\tPASS\tRS=5678901\n" >> dbsnp.vcf
-          
+          ref1=$(get_ref_base 10433100 1)
+          ref2=$(get_ref_base 10434200 1)
+          ref3=$(get_ref_base 10435300 1)
+          ref4=$(get_ref_base 10436400 1)
+          ref5=$(get_ref_base 10436500 2)
+
+          printf "chr20\t10433100\trs1234567\t${ref1}\tG\t.\tPASS\tRS=1234567\n" >> dbsnp.vcf
+          printf "chr20\t10434200\trs2345678\t${ref2}\tC\t.\tPASS\tRS=2345678\n" >> dbsnp.vcf
+          printf "chr20\t10435300\trs3456789\t${ref3}\tA\t.\tPASS\tRS=3456789\n" >> dbsnp.vcf
+          printf "chr20\t10436400\trs4567890\t${ref4}\tT\t.\tPASS\tRS=4567890\n" >> dbsnp.vcf
+          printf "chr20\t10436500\trs5678901\t${ref5}\tA\t.\tPASS\tRS=5678901\n" >> dbsnp.vcf
+
           # Index the VCF
           gatk IndexFeatureFile -I dbsnp.vcf
-          
+
           # Create synthetic Mills and 1000G indels VCF similarly
           echo '##fileformat=VCFv4.2' > mills_1000G.vcf
           echo '##reference=GRCh38' >> mills_1000G.vcf
           echo '##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">' >> mills_1000G.vcf
-          echo '##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of variant">' >> mills_1000G.vcf
           echo "##contig=<ID=chr20,length=$(grep "^chr20" ref.fasta.fai | cut -f2)>" >> mills_1000G.vcf
           printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> mills_1000G.vcf
-          
-          ref6=$(get_ref_base 1000150 2)
-          ref7=$(get_ref_base 1000250 1)
-          ref8=$(get_ref_base 1000350 3)
-          ref9=$(get_ref_base 1000450 1)
-          
-          printf "chr20\t1000150\tMILL1\t${ref6}\t${ref6:0:1}\t.\tPASS\tTYPE=deletion;SOURCE=MILLS\n" >> mills_1000G.vcf
-          printf "chr20\t1000250\tMILL2\t${ref7}\t${ref7}TT\t.\tPASS\tTYPE=insertion;SOURCE=MILLS\n" >> mills_1000G.vcf
-          printf "chr20\t1000350\tG1000_1\t${ref8}\t${ref8:0:1}\t.\tPASS\tTYPE=deletion;SOURCE=1000G\n" >> mills_1000G.vcf
-          printf "chr20\t1000450\tG1000_2\t${ref9}\t${ref9}AGC\t.\tPASS\tTYPE=insertion;SOURCE=1000G\n" >> mills_1000G.vcf
-          
+
+          ref6=$(get_ref_base 10433150 2)
+          ref7=$(get_ref_base 10434250 1)
+          ref8=$(get_ref_base 10435350 3)
+          ref9=$(get_ref_base 10436450 1)
+
+          printf "chr20\t10433150\tMILL1\t${ref6}\t${ref6:0:1}\t.\tPASS\tTYPE=deletion;SOURCE=MILLS\n" >> mills_1000G.vcf
+          printf "chr20\t10434250\tMILL2\t${ref7}\t${ref7}TT\t.\tPASS\tTYPE=insertion;SOURCE=MILLS\n" >> mills_1000G.vcf
+          printf "chr20\t10435350\tG1000_1\t${ref8}\t${ref8:0:1}\t.\tPASS\tTYPE=deletion;SOURCE=1000G\n" >> mills_1000G.vcf
+          printf "chr20\t10436450\tG1000_2\t${ref9}\t${ref9}AGC\t.\tPASS\tTYPE=insertion;SOURCE=1000G\n" >> mills_1000G.vcf
+
+          # Compress and index
           bgzip mills_1000G.vcf
           tabix -p vcf mills_1000G.vcf.gz
-          
+
           # Create synthetic known indels VCF
           echo '##fileformat=VCFv4.2' > known_indels.vcf
           echo '##reference=GRCh38' >> known_indels.vcf
           echo '##INFO=<ID=TYPE,Number=1,Type=String,Description="Type of variant">' >> known_indels.vcf
           echo "##contig=<ID=chr20,length=$(grep "^chr20" ref.fasta.fai | cut -f2)>" >> known_indels.vcf
           printf "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n" >> known_indels.vcf
-          
-          ref10=$(get_ref_base 1000550 2)
-          ref11=$(get_ref_base 1000650 1)
-          ref12=$(get_ref_base 1000750 3)
-          
-          printf "chr20\t1000550\tindel1\t${ref10}\t${ref10:0:1}\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
-          printf "chr20\t1000650\tindel2\t${ref11}\t${ref11}TT\t.\tPASS\tTYPE=insertion\n" >> known_indels.vcf
-          printf "chr20\t1000750\tindel3\t${ref12}\t${ref12:0:1}\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
-          
+
+          ref10=$(get_ref_base 10433550 2)
+          ref11=$(get_ref_base 10434650 1)
+          ref12=$(get_ref_base 10435750 3)
+
+          printf "chr20\t10433550\tindel1\t${ref10}\t${ref10:0:1}\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
+          printf "chr20\t10434650\tindel2\t${ref11}\t${ref11}TT\t.\tPASS\tTYPE=insertion\n" >> known_indels.vcf
+          printf "chr20\t10435750\tindel3\t${ref12}\t${ref12:0:1}\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
+
+          # Compress and index
           bgzip known_indels.vcf
           tabix -p vcf known_indels.vcf.gz
           
@@ -209,8 +210,9 @@ jobs:
           # Generate BAM index
           samtools index project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa.markDuplicates.bam
           
-          # Extract region and ensure proper pairing
-          samtools view -h -f 0x2 -s 0.1 project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa.markDuplicates.bam chr20:1000000-1100000 | \
+          # Extract region with known variants, downsample, and convert to fastq
+          # We're using a region known to contain multiple GIAB high-confidence variants
+          samtools view -h -s 0.1 project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa.markDuplicates.bam chr20:10433000-10437000 | \
           samtools sort -n - | \
           samtools fastq -1 test/data/r1.fq -2 test/data/r2.fq -0 /dev/null -s /dev/null -n
           

@@ -139,7 +139,6 @@ jobs:
           ref11=$(get_ref_base 10434650 1)
           ref12=$(get_ref_base 10435750 3)
 
-          # Create sorted VCF entries with unique variants
           printf "chr20\t10433550\tindel1\t${ref10}\t${ref10:0:1}\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf
           printf "chr20\t10434650\tindel2\t${ref11}\t${ref11}TT\t.\tPASS\tTYPE=insertion\n" >> known_indels.vcf
           printf "chr20\t10435750\tindel3\t${ref12}\t${ref12:0:1}\t.\tPASS\tTYPE=deletion\n" >> known_indels.vcf

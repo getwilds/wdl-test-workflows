@@ -506,7 +506,12 @@ task annovar {
       -remove \
       -protocol "~{annovar_protocols}" \
       -operation "~{annovar_operation}" \
-      -nastring . -vcfinput
+      -nastring . \
+      -vcfinput
+      
+    # Copy output files to expected locations
+    cp "~{base_vcf_name}.~{ref_name}_multianno.txt" "~{base_file_name}.GATK.~{ref_name}_multianno.txt"
+    cp "~{base_vcf_name}.~{ref_name}_multianno.vcf" "~{base_file_name}.GATK.~{ref_name}_multianno.vcf"
   >>>
 
   output {
